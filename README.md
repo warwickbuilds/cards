@@ -9,12 +9,12 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/internet%20permission-none-2E7D32?style=flat-square&logo=android&logoColor=white" alt="No internet permission" />
+  <img src="https://img.shields.io/badge/cards%20data-100%25%20offline-2E7D32?style=flat-square&logo=android&logoColor=white" alt="Card data 100% offline" />
   <img src="https://img.shields.io/badge/account-not%20needed-2E7D32?style=flat-square" alt="No account needed" />
   <img src="https://img.shields.io/badge/tracking%20%26%20analytics-zero-2E7D32?style=flat-square" alt="Zero tracking and analytics" />
   <img src="https://img.shields.io/badge/ads-none-2E7D32?style=flat-square" alt="No ads" />
   <img src="https://img.shields.io/badge/encryption-AES--256%20at%20rest-4F46E5?style=flat-square&logo=letsencrypt&logoColor=white" alt="AES-256 encryption at rest" />
-  <img src="https://img.shields.io/badge/app%20lock-biometric-4F46E5?style=flat-square" alt="Biometric app lock" />
+  <img src="https://img.shields.io/badge/app%20lock-biometric-4F46E5?style=flat-square&logo=android&logoColor=white" alt="Biometric app lock" />
 </p>
 
 <p align="center">
@@ -40,7 +40,7 @@
 
 **Cards keeps your physical cards on your Android phone, and nowhere else.** Bank cards, loyalty cards, memberships and IDs, photographed front and back and shown full screen at full brightness when you need them at the counter.
 
-It is a **privacy-first, offline-only, local-first** card wallet: no account, no login, no cloud, no ads, no analytics, no tracking and no AI. The app doesn't even have permission to use the internet. Everything is **encrypted on your device**, locked behind your fingerprint or face, and **you own your data**: back it up to an encrypted file you keep, and take it with you. Free and open source under the [MIT License](LICENSE), so anyone can check every claim on this page.
+It is a **privacy-first, local-first** card wallet: no account, no login, no cloud, no ads, no analytics, no tracking, no background network traffic and no AI. The only network request Cards can ever make is checking GitHub Releases when you manually tap **Settings → Check for updates**. Everything is **encrypted on your device**, locked behind your fingerprint or face, and **you own your data**: back it up to an encrypted file you keep, and take it with you. Free and open source under the [MIT License](LICENSE), so anyone can check every claim on this page.
 
 ## Contents
 
@@ -58,7 +58,7 @@ It is a **privacy-first, offline-only, local-first** card wallet: no account, no
 
 | | |
 | --- | --- |
-| 📵 **100% offline** | No internet permission at all. Android itself blocks the app from ever reaching a network, so nothing can leak, even by mistake. |
+| 📵 **Offline cards, zero background traffic** | Your cards never leave the phone. No servers, no cloud sync, and no background network calls—the only request Cards can make is checking GitHub Releases when you tap **Check for updates** in Settings. |
 | 🙅 **No account, no login** | Install and go. No email, no phone number, no sign-up, no password to forget or to be breached. |
 | 🔐 **Encrypted at rest** | Every card, photo and note lives in an AES-256 encrypted database (SQLCipher). The key is held by Android's hardware-backed Keystore. |
 | 👆 **Biometric app lock** | Fingerprint, face or screen lock on open and after you step away. Screenshots and screen recording are blocked. |
@@ -73,7 +73,7 @@ Most wallet and loyalty-card apps want an account, sync to a cloud, show ads, an
 
 | | Cards | Typical wallet / loyalty-card app |
 | --- | --- | --- |
-| Internet access | ❌ **None** (no `INTERNET` permission) | ✅ Always |
+| Background network access | ❌ **None** (manual GitHub update check only) | ✅ Always |
 | Account or login | ❌ **Never** | Usually required |
 | Cloud sync of your cards | ❌ **Never** | Often on by default |
 | Ads, analytics, telemetry, crash reporting | ❌ **Zero** | Common |
@@ -88,12 +88,12 @@ Most wallet and loyalty-card apps want an account, sync to a cloud, show ads, an
 
 **What that means in practice**
 
-- **Zero data collection.** Cards collects nothing. There's no developer server, no analytics, no telemetry, no crash reports, no usage stats, no advertising ID. Not even an update check.
-- **Offline-only, not just offline-first.** The release APK has no `INTERNET` permission, so it physically cannot send or receive anything over Wi-Fi or mobile data. This is enforced by Android, not by a promise. [Check it yourself](#check-it-yourself).
+- **Zero data collection.** Cards collects nothing. There's no developer server, no analytics, no telemetry, no crash reports, no usage stats, no advertising ID.
+- **Offline cards, manual-only update check.** Cards works completely offline and never calls the network on launch or in the background. The only network call in the codebase is an unauthenticated `GET` to GitHub's public releases API (`src/lib/updates.ts`, enforced by a static test) when you tap **Settings → Check for updates**. [Check it yourself](#check-it-yourself).
 - **No account, no identity.** The app never knows who you are. Nothing to sign up for, nothing to log in to, no password reuse risk.
 - **Encrypted at rest.** The whole database, photos included, is encrypted with SQLCipher (AES-256). The 256-bit key is random, made on your phone, and protected by the hardware-backed Android Keystore. Photos are stored **inside** the encrypted database, never as loose image files.
 - **Locked when you're not looking.** Biometric or PIN app lock, re-locking after the time you choose. `FLAG_SECURE` blocks screenshots and screen recording and blanks the app in the recent-apps switcher.
-- **Minimal permissions.** Only the camera (to photograph a card) and biometrics (for the lock). Storage, media, microphone and network permissions are explicitly blocked. The gallery uses Android's private photo picker.
+- **Minimal permissions.** Only Camera (to photograph a card), Biometric (for the lock) and Internet (solely for manual update checks). Storage, media, microphone, location and network-state permissions are explicitly blocked. The gallery uses Android's private photo picker.
 - **Data ownership and portability.** Your cards are yours. Export them any time to an encrypted `.cardsbackup` file (PBKDF2 + AES-256-GCM, with your passphrase), keep it wherever you like, and restore it on another phone.
 - **Nothing in Google's cloud.** Android's automatic cloud backup is switched off for Cards, so your card photos never end up in a Google Drive backup.
 - **Transparent and auditable.** Every line is open source, every release is built by GitHub Actions from this repo, and every APK is signed with one published certificate.
@@ -105,14 +105,14 @@ Read the full [Privacy policy](PRIVACY.md) (it's short, because there's nothing 
 You don't have to take our word for it. With the Android SDK build tools on a computer:
 
 ```bash
-# No android.permission.INTERNET in the list
+# Minimal permissions: only CAMERA, USE_BIOMETRIC and INTERNET (no storage/media/mic/location)
 aapt2 dump permissions cards-<version>-arm64.apk
 
 # Signed with the published release certificate (see SECURITY.md)
 apksigner verify --print-certs cards-<version>-arm64.apk
 ```
 
-On the phone itself: **Settings → Apps → Cards → Permissions** (or **App info → Other permissions**) shows only Camera and Biometric, and **Mobile data & Wi-Fi** shows no data used, ever.
+On the phone itself: **Settings → Apps → Cards → Permissions** shows only Camera and Biometric, and **Mobile data & Wi-Fi** shows zero background data used (only tiny manual GitHub release checks when you tap **Check for updates**).
 
 ## What it does
 
@@ -133,7 +133,7 @@ Cards isn't on the Play Store (that would mean a Google developer account, Play 
 3. **Play Protect** may say the app is unrecognised because it isn't from the Play Store. Tap **More details → Install anyway**.
 4. Open Cards. That's it: no sign-up screen.
 
-**Updating**: Cards has no internet access, so it never checks for updates itself. Come back to [Releases](https://github.com/warwickbuilds/cards/releases) (or press **Watch → Custom → Releases** on GitHub to be emailed) and install the new APK over the old one. Your cards are kept. Every release is signed with the same key, so this always works. If Android ever says the app "conflicts with an existing package", the APK was signed with a different key: **don't uninstall to get around it, because that deletes your cards.** Make a backup first.
+**Updating**: Cards never checks the network in the background. Whenever you want to check for a new version, open **Settings → Check for updates** and tap **Download** if a newer release is available—or visit [Releases](https://github.com/warwickbuilds/cards/releases) directly (press **Watch → Custom → Releases** on GitHub to be emailed). Install the new APK over the old one and your cards are kept. Every release is signed with the same key, so this always works. If Android ever says the app "conflicts with an existing package", the APK was signed with a different key: **don't uninstall to get around it, because that deletes your cards.** Make a backup first.
 
 Builds from pull requests are signed with a debug key and can't be installed over a release.
 
@@ -149,7 +149,7 @@ Reinstalling or on a new phone? Go to **Settings → Restore**, pick your `.card
 
 ## Your data and privacy
 
-- **Everything stays on your phone.** Cards has no internet permission, so it can't send anything anywhere. No account, no ads, no analytics, no AI.
+- **Everything stays on your phone.** Your cards, photos, notes and settings never leave your device. No account, no ads, no analytics, no AI, and no background network traffic (only a manual **Settings → Check for updates** check against GitHub Releases when you tap it).
 - Your cards, photos and notes are stored in an **encrypted database**. The key is kept in Android's hardware-backed Keystore and never leaves the phone.
 - **Uninstalling the app, or clearing its storage, deletes your cards permanently.** Android's own cloud backup is switched off for this app on purpose (so your card photos never end up in a Google backup), and there's no Cards cloud to recover from. Make a backup in **Settings → Back up** and keep the file somewhere safe, ideally off the phone.
 - Backups are encrypted with a passphrase you choose. Without the passphrase nobody, including you and including us, can open one, so don't forget it.
@@ -199,11 +199,11 @@ Everything below is about how the app is built, released and maintained.
 | App | Expo SDK 58 (development build, not Expo Go), React Native 0.88 (Hermes V1), React 19, TypeScript 6, Expo Router, Android 16+ (API 36, `arm64-v8a` only) |
 | Data | SQLite with SQLCipher (AES-256, WAL + `synchronous=NORMAL`) through expo-sqlite; plain SQL with numbered migrations (`PRAGMA user_version`); photos as JPEG inside the database; scoped store invalidation |
 | Keys and crypto | expo-secure-store (Android Keystore) for the database key; expo-crypto AES-256-GCM and @noble/hashes PBKDF2 for backups |
-| Security | expo-local-authentication (biometric lock), expo-screen-capture (`FLAG_SECURE`), no `INTERNET` permission, `allowBackup: false`, `networkInspector: false` |
+| Security | expo-local-authentication (biometric lock), expo-screen-capture (`FLAG_SECURE`), `allowBackup: false`, `networkInspector: false`, static test restricting `fetch` to manual GitHub update checks |
 | UI | Custom tokens with light and dark mode, lucide icons, Reanimated and Gesture Handler for zoom and pan |
 | Phone features | expo-image-picker (camera and system photo picker), expo-image-manipulator (single-decode crop, rotate, resize), expo-brightness, expo-keep-awake |
 | Quality | Jest (jest-expo + real SQLite `node:sqlite` repo tests), TypeScript, ESLint, `expo-doctor`, and CI + APK verification workflows on pull requests |
-| Releases | GitHub Actions builds and signs a single R8-shrunk `arm64-v8a` APK (Android 16+ / Pixel 10+, uncompressed 16 KB-aligned `.so`) with Gradle, verifies offline permissions with `aapt2`, and publishes to GitHub Releases |
+| Releases | GitHub Actions builds and signs a single R8-shrunk `arm64-v8a` APK (Android 16+ / Pixel 10+, uncompressed 16 KB-aligned `.so`) with Gradle, verifies minimal permissions with `aapt2`, and publishes to GitHub Releases |
 
 Full versions are in [Main dependency versions](#main-dependency-versions).
 
@@ -224,7 +224,7 @@ Full versions are in [Main dependency versions](#main-dependency-versions).
 
 ## Status
 
-Version **0.2.0** (PR #5): Android 16+ (Pixel 10+, `arm64-v8a`) cleanup, performance pass, security hardening and bug fixes.
+Version **0.2.0** (PR #5): Android 16+ (Pixel 10+, `arm64-v8a`) cleanup, manual Settings update checker, performance pass, security hardening and bug fixes.
 
 | Area | State |
 | --- | --- |
@@ -232,12 +232,13 @@ Version **0.2.0** (PR #5): Android 16+ (Pixel 10+, `arm64-v8a`) cleanup, perform
 | Categories: add, rename, colour, reorder, switch on/off, delete | Done (PR #1, #5) |
 | Home: grouped by category, pinned first, search, category chips, sort | Done (PR #1, #5) |
 | Full-screen viewer: full brightness, keep awake, zoom, rotate, immersive | Done (PR #1, #5) |
-| Security: encrypted database, app lock, screenshot blocking, no network | Done (PR #1, #2, #5) |
+| Security: encrypted database, app lock, screenshot blocking, minimal permissions | Done (PR #1, #2, #5) |
 | Encrypted backup and restore (merge or replace) | Done (PR #1, #5) |
+| Manual update checker & direct APK download link in Settings | Done (PR #5) |
 | Signed APKs on GitHub Releases | Done (v0.1.0, v0.1.1; single `arm64-v8a` APK from v0.2.0) |
 | Open source polish: privacy-first README, banner and badges, privacy policy, security policy, contributing guide, code of conduct, issue templates | Done (PR #3) |
 | Cloud dev environment setup (`.agents/environment.json`) | Done (PR #4) |
-| Tested on a real phone | 0.1.0 failed on first launch (fixed in 0.1.1); 0.2.0 APK built cleanly in CI and ready for Pixel 10 testing |
+| Tested on a real phone | 0.1.0 failed on first launch (fixed in 0.1.1); 0.2.0 ready for Pixel 10 testing |
 | Screenshots in the README | Planned (needs demo cards, never real ones) |
 
 ## Features
@@ -282,6 +283,7 @@ The detailed list of what works now.
 - **Block screenshots** (default on): also blanks the app in the recent-apps view.
 - **Full brightness**, **Order**, **Show switched-off categories**, **Crop photos to card shape**.
 - **Back up**, **Restore**, **Delete everything** (asks for your fingerprint/PIN first; resets categories back to the defaults).
+- **About & Check for updates**: shows the installed version and checks GitHub Releases on tap (never in the background), offering a direct `arm64` APK download link and release notes link when a newer version is out.
 
 ### Backup and restore
 
@@ -292,7 +294,7 @@ The detailed list of what works now.
 
 | Version | Date | PR | Changes |
 | --- | --- | --- | --- |
-| 0.2.0 | 2026-11-26 | #5 | Pixel 10+ / Android 16 (API 36) `arm64-v8a`-only build with R8 minification, resource shrinking, direct uncompressed native libs (`useLegacyPackaging: false`), and dropped iOS/web config and unused native deps (`@expo/vector-icons`, `expo-document-picker`, `expo-sharing`, `react-dom`, `react-native-web`). Security hardening: hide `<Modal>` sheets when locked, defer mounting navigation/card data until initial unlock, bound `expectExternal` grace window (5 min) and clear after permission denial, clear restore passphrase after decrypt, guard DB key overwrite on existing file, tighten backup version/format/dimension checks, and assert no `INTERNET` permission + SQLCipher in CI. Performance & bug fixes: scoped store invalidation, single resolved thumbnail query (fixes back-only cards), rotated zoom pan bounds, stale category filter recovery, single-decode photo prep with native ref release, zero-fade card rendering, hardware back exit from immersive mode, `NULL`-preserving restore merge, starter-category re-seed on Delete everything, keyboard-aware sheets, and real SQLite repo tests. |
+| 0.2.0 | 2026-11-26 | #5 | Pixel 10+ / Android 16 (API 36) `arm64-v8a`-only build with R8 minification, resource shrinking, direct uncompressed native libs (`useLegacyPackaging: false`), and dropped iOS/web config and unused native deps (`@expo/vector-icons`, `expo-document-picker`, `expo-sharing`, `react-dom`, `react-native-web`). Added manual-only **Settings → Check for updates** against GitHub Releases with trusted-URL direct `arm64` APK download & release notes links (`src/lib/version.ts`, `src/lib/updates.ts`; no background checks, enforced by static `fetch` guard test). Security hardening: hide `<Modal>` sheets when locked, defer mounting navigation/card data until initial unlock, bound `expectExternal` grace window (5 min) and clear after permission denial, clear restore passphrase after decrypt, guard DB key overwrite on existing file, tighten backup version/format/dimension checks, and verify minimal permissions + SQLCipher in CI. Performance & bug fixes: scoped store invalidation, single resolved thumbnail query (fixes back-only cards), rotated zoom pan bounds, stale category filter recovery, single-decode photo prep with native ref release, zero-fade card rendering, hardware back exit from immersive mode, `NULL`-preserving restore merge, starter-category re-seed on Delete everything, keyboard-aware sheets, and real SQLite repo tests. |
 | 0.1.1 (dev) | 2026-11-26 | #4 | Dev environment only, no app change: add `.agents/environment.json` so cloud dev environments automatically install locked dependencies with `npm ci`. |
 | 0.1.1 (docs) | 2026-11-26 | #3 | Docs and repo only, no app change: privacy-first README with banner, badges, highlights, a privacy comparison and FAQ, user guide first and developer details below; new PRIVACY.md, CODE_OF_CONDUCT.md and CONTRIBUTING.md; fuller SECURITY.md with the release certificate; bug and feature issue forms. |
 | 0.1.1 | 2026-11-26 | #2 | Fix: 0.1.0 stopped on launch with "file is not a database". Writes ran on a second database connection that never got the encryption key. All writes now run, one at a time, on the one encrypted connection (`src/db/transaction.ts`). An install of 0.1.0 opens fine after updating, no reinstall needed. |
@@ -383,14 +385,14 @@ PRIVACY.md, SECURITY.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md   project policies
 
 | Threat | Protection |
 | --- | --- |
-| Data leaving the phone | No `INTERNET` permission in release builds (removed in `app.config.js` and enforced in CI via `aapt2 dump permissions`), so the OS blocks all network access. No analytics or crash reporting libraries. |
+| Data leaving the phone | No developer servers, analytics, crash reporting or background network calls. The **only** `fetch()` allowed in `src/` is the manual **Settings → Check for updates** request to GitHub's public releases API (`src/lib/updates.ts`), enforced by a static unit test (`src/lib/__tests__/version.test.ts`), and update links are strictly validated against `https://github.com/warwickbuilds/cards/releases/`. |
 | Someone with the unlocked phone | App lock with Android's biometric prompt or screen lock (`expo-local-authentication`), on launch and after the chosen time in the background. Screens aren't mounted before initial unlock, bottom-sheet modals hide automatically while locked, and external camera/picker flows use a bounded 5-minute grace window. |
 | Shoulder-surfing / screenshots / recent apps | `FLAG_SECURE` (`expo-screen-capture`) blocks screenshots and screen recording and blanks the app in the app switcher. |
 | Phone storage read off the device | Database encrypted with SQLCipher (AES-256). Key is 32 random bytes in `expo-secure-store`, encrypted by the hardware-backed Android Keystore (never silently overwritten if an encrypted database already exists). `secure_delete` overwrites deleted rows. |
 | Leftover photo files | Camera, crop and resize outputs are deleted immediately after reading; native image refs are released; cache folders are swept on launch and after capture. `expo-image` is told not to cache card photos on disk. |
 | Cloud/adb backups | `allowBackup: false`, so Android never copies the database (or its key) into Google backups. |
 | Backup files | `.cardsbackup`: PBKDF2-HMAC-SHA256 (150,000 iterations, random salt) → AES-256-GCM with the header as authenticated data. Wrong passphrase or any tampering fails cleanly, and passphrases are cleared from state right after encrypting or decrypting. Restored data is validated (header version, format, ids, sizes, positive dimensions, JPEG signatures, references) before anything is changed, and applied in one transaction. |
-| Over-broad permissions | Only camera and biometric permissions. Microphone, storage, media, overlay, settings and network-state permissions are explicitly blocked. The gallery uses Android's photo picker (no storage permission). |
+| Over-broad permissions | Only Camera, Biometric and Internet (manual update checks only). Microphone, storage, media, location, contacts, overlay, settings and network-state permissions are explicitly blocked and verified in CI (`aapt2 dump permissions`). The gallery uses Android's photo picker (no storage permission). |
 
 Release APKs are signed with one key; its certificate SHA-256 is `5d88d9a692842701578e71c4456eaceaabe5a46639dad2f508359d122c0bad5e` (see [SECURITY.md](SECURITY.md#checking-a-download)).
 
@@ -398,7 +400,9 @@ Limits worth knowing: anyone who knows your phone's screen-lock PIN can open the
 
 ## Services
 
-None. Cards talks to no outside service, needs no keys and has no accounts. Android permissions used: **Camera** (taking photos, asked the first time), **Biometric** (app lock).
+- **GitHub Releases API** (`api.github.com/repos/warwickbuilds/cards/releases/latest`): called **only** when you tap **Settings → Check for updates**. Unauthenticated, read-only, no keys, no accounts, and never called in the background.
+
+Android permissions used: **Camera** (taking photos, asked the first time), **Biometric** (app lock), **Internet** (manual update checks only).
 
 ## Running it
 
@@ -409,10 +413,10 @@ npm run typecheck            # TypeScript
 npm run lint                 # ESLint (Expo + React Compiler rules)
 npx expo-doctor              # SDK & dependency health check
 npx expo export -p android   # bundle check
-npm run android              # development build on a Pixel 10+ / Android 16+ device or emulator (sets CARDS_DEV=1)
+npm run android              # development build on a Pixel 10+ / Android 16+ device or emulator
 ```
 
-`CARDS_DEV=1` keeps the INTERNET permission so a development build can reach Metro. Without it (every release and CI build) the permission is removed. Expo Go can't run this app (SQLCipher and other native modules); use a development build.
+Expo Go can't run this app (SQLCipher and other native modules); use a development build.
 
 ## Releases
 
@@ -443,7 +447,7 @@ Pull requests that touch the build set-up also build the `arm64-v8a` APK (debug-
 
 ## Maintenance
 
-- **Upgrading Expo**: follow `AGENTS.md` (read the versioned docs, use `npx expo install --fix` and `npx expo-doctor`). The release workflow automatically checks that `expo.sqlite.useSQLCipher=true`, `reactNativeArchitectures=arm64-v8a`, and `android.minSdkVersion=36` land in `android/gradle.properties`, and that `INTERNET` is absent from the built APK (`aapt2 dump permissions`).
+- **Upgrading Expo**: follow `AGENTS.md` (read the versioned docs, use `npx expo install --fix` and `npx expo-doctor`). The release workflow automatically checks that `expo.sqlite.useSQLCipher=true`, `reactNativeArchitectures=arm64-v8a`, and `android.minSdkVersion=36` land in `android/gradle.properties`, and that blocked permissions stay absent from the built APK (`aapt2 dump permissions`).
 - **Transactions**: use `inTransaction` from `src/db/transaction.ts`. Never use expo-sqlite's `withExclusiveTransactionAsync` or `useNewConnection`: they open a second connection without the SQLCipher key and every write fails with "file is not a database". A test fails if either appears in `src`.
 - **Database changes**: append a migration; add any new table to `exportAll`/`importAll` in `src/db/repo.ts` and to `parsePayload` in `src/lib/backupData.ts`; bump `DATA_FORMAT` if old apps can't read the new backups.
 - **Backup file format** changes: bump `FILE_VERSION` in `src/lib/backupCrypto.ts` and keep reading the old one.

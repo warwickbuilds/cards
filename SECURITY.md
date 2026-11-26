@@ -4,7 +4,7 @@ Cards stores photos of payment cards, IDs and loyalty cards, so security problem
 
 ## Supported versions
 
-Only the [latest release](https://github.com/warwickbuilds/cards/releases/latest) gets fixes. Cards has no internet access and can't tell you about updates, so please check you're on the latest version before reporting (**Settings**, version at the bottom).
+Only the [latest release](https://github.com/warwickbuilds/cards/releases/latest) gets fixes. Cards never checks for updates in the background, so please tap **Settings → Check for updates** to verify you're on the latest version before reporting.
 
 | Version | Supported |
 | --- | --- |
@@ -31,7 +31,7 @@ You should hear back within a week. Once a fix is released, you'll be credited i
 
 Things we especially want to hear about:
 
-- Any way the app can reach a network, or any build that ships with the `INTERNET` permission
+- Any network request outside the manual **Settings → Check for updates** call to `api.github.com` in `src/lib/updates.ts`, any background network activity, or any untrusted/non-GitHub update redirect
 - Card photos, notes or the database key ending up outside the encrypted database: loose files in cache or storage, logs, the clipboard, Android backups, thumbnails or the recent-apps screenshot
 - Reading the database without the key, or getting the key out of the Android Keystore without the phone's unlock
 - Getting past the app lock, or screenshots and screen recording working while `FLAG_SECURE` is on
@@ -57,6 +57,6 @@ Every release is signed with the same key. Its certificate SHA-256 is:
 5d88d9a692842701578e71c4456eaceaabe5a46639dad2f508359d122c0bad5e
 ```
 
-Check an APK with `apksigner verify --print-certs cards-<version>-arm64.apk` (Android SDK build tools) and compare the `SHA-256 digest` line. Check that it can't use the network with `aapt2 dump permissions cards-<version>-arm64.apk`: `android.permission.INTERNET` must not be in the list.
+Check an APK with `apksigner verify --print-certs cards-<version>-arm64.apk` (Android SDK build tools) and compare the `SHA-256 digest` line. Check its permissions with `aapt2 dump permissions cards-<version>-arm64.apk`: only Camera, Biometric and Internet (for manual update checks) are requested; storage, media, microphone, location and network-state permissions are blocked.
 
 The full security model is in the README under [Security and privacy](README.md#security-and-privacy). The privacy policy is [PRIVACY.md](PRIVACY.md).

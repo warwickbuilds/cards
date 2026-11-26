@@ -13,7 +13,7 @@ Thanks for wanting to help. Cards is a small, personal app with one big promise:
 
 These are the app's standing rules. A PR that breaks one will be asked to change.
 
-1. **Fully offline, forever.** No network access, no analytics, no crash reporting, no cloud sync, no AI, no ads, no accounts. The release build has no `INTERNET` permission (`app.config.js`) and must stay that way.
+1. **Local-first, zero data collection.** No analytics, no crash reporting, no cloud sync, no AI, no ads, no accounts, and no background network calls. The only permitted network call is the manual-only **Settings → Check for updates** request to GitHub Releases in `src/lib/updates.ts` (enforced by a static test).
 2. **Never commit real card data.** No real card photos, card numbers, or anything derived from them, in code, tests, issues or screenshots. Tests use tiny fake JPEG bytes; screenshots use made-up cards.
 3. **Card pictures live only in the encrypted database.** Don't write them to disk as files; delete any temporary file (camera, crop, resize) straight after use.
 4. **One keyed connection.** Write to the database only through `inTransaction` / `exclusively` in `src/db/transaction.ts`. Never use `withExclusiveTransactionAsync` or `useNewConnection`: a second connection has no SQLCipher key.
@@ -29,10 +29,10 @@ You need Node 22, npm, and an Android 16+ phone or emulator (Pixel 10 and newer,
 git clone https://github.com/warwickbuilds/cards.git
 cd cards
 npm ci
-npm run android   # builds and installs a development build (sets CARDS_DEV=1)
+npm run android   # builds and installs a development build
 ```
 
-`CARDS_DEV=1` keeps the `INTERNET` permission in development builds only, so they can reach Metro. More detail is in the README under [Running it](README.md#running-it), and [AGENTS.md](AGENTS.md) has notes on how Expo works in this SDK. [docs/DESIGN.md](docs/DESIGN.md) explains the UX and security choices.
+More detail is in the README under [Running it](README.md#running-it), and [AGENTS.md](AGENTS.md) has notes on how Expo works in this SDK. [docs/DESIGN.md](docs/DESIGN.md) explains the UX and security choices.
 
 ## Before you open a pull request
 

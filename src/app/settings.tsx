@@ -1,4 +1,3 @@
-import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import {
   ArrowDownUp,
@@ -7,25 +6,28 @@ import {
   ChevronRight,
   Crop,
   Download,
+  ExternalLink,
   EyeOff,
   Fingerprint,
   FolderCog,
+  RefreshCw,
   ScreenShareOff,
+  ShieldCheck,
   Sun,
   Timer,
   Trash2,
   Upload,
-  WifiOff,
 } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Linking, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Group, IconButton, Row, Sheet, SheetAction, SwitchRow, T } from '@/components/ui';
+import { Button, Group, IconButton, Row, Sheet, SheetAction, SwitchRow, T } from '@/components/ui';
 import { useDb, useSettings } from '@/db/DataProvider';
 import { eraseEverything, setSetting } from '@/db/repo';
 import { lockAfterLabel } from '@/lib/lockPolicy';
 import { LOCK_AFTER_CHOICES, type SortMode } from '@/lib/types';
+import { checkForUpdate, installedVersion, type CheckResult } from '@/lib/updates';
 import { useSecurity } from '@/security/SecurityProvider';
 import { useTheme } from '@/theme/ThemeProvider';
 import { layout, space } from '@/theme/tokens';
@@ -37,8 +39,10 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const db = useDb();
   const s = useSettings();
-  const { deviceSecure, confirmIdentity } = useSecurity();
+  const { deviceSecure, confirmIdentity, expectExternal, clearExternal } = useSecurity();
   const [picker, setPicker] = useState<'lock' | 'sort' | null>(null);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [updateResult, setUpdateResult] = useState<CheckResult | null>(null);
   const chevron = <ChevronRight size={20} color={colors.textFaint} />;
 
   const toggleLock = async (on: boolean) => {
@@ -69,6 +73,26 @@ export default function SettingsScreen() {
         },
       ],
     );
+  };
+
+  const checkUpdates = async () => {
+    setCheckingUpdate(true);
+    try {
+      setUpdateResult(await checkForUpdate());
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
+
+  const openExternalLink = async (url: string) => {
+    expectExternal();
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert('Couldn’t open link', 'Please try again.');
+    } finally {
+      clearExternal();
+    }
   };
 
   return (
@@ -175,19 +199,57 @@ export default function SettingsScreen() {
           <Row icon={Trash2} title="Delete everything" danger onPress={eraseAll} />
         </Group>
 
-        <View style={[styles.about, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <WifiOff size={22} color={colors.textMuted} />
-          <View style={{ flex: 1, gap: 4 }}>
-            <T variant="bodyStrong">Offline by design</T>
-            <T variant="caption" color={colors.textMuted}>
-              Cards has no internet access at all, no account and no tracking. Your cards are encrypted on this phone and never
-              leave it unless you make a backup.
-            </T>
-            <T variant="caption" color={colors.textFaint} style={{ marginTop: space[1] }}>
-              Version {Constants.expoConfig?.version ?? '?'}
-            </T>
+        <Group title="About">
+          <View style={styles.aboutBody}>
+            <View style={styles.aboutHeader}>
+              <ShieldCheck size={22} color={colors.textMuted} />
+              <View style={{ flex: 1, gap: 4 }}>
+                <T variant="bodyStrong">Version {installedVersion() ?? '?'}</T>
+                <T variant="caption" color={colors.textMuted}>
+                  Your cards stay encrypted on this phone with no account and no tracking. Cards never checks the network in the
+                  background; it only contacts GitHub when you tap Check for updates below.
+                </T>
+              </View>
+            </View>
+            {updateResult?.status === 'current' ? (
+              <T variant="label" color={colors.success}>
+                You have the latest version.
+              </T>
+            ) : null}
+            {updateResult?.status === 'unavailable' ? (
+              <T variant="label" color={colors.textMuted}>
+                Couldn’t reach GitHub. Check your connection and try again.
+              </T>
+            ) : null}
+            {updateResult?.status === 'update' ? (
+              <View style={{ gap: space[3] }}>
+                <T variant="label" color={colors.textMuted}>
+                  Version {updateResult.update.version} is available. Download the APK and open it to install over this one. Your
+                  cards stay in place, but making a backup first is a good idea.
+                </T>
+                <Button
+                  label={`Download ${updateResult.update.version}`}
+                  icon={Download}
+                  onPress={() => openExternalLink(updateResult.update.downloadUrl)}
+                />
+                <Button
+                  kind="secondary"
+                  label="Release notes"
+                  icon={ExternalLink}
+                  onPress={() => openExternalLink(updateResult.update.pageUrl)}
+                />
+              </View>
+            ) : (
+              <Button
+                kind="secondary"
+                label={checkingUpdate ? 'Checking…' : 'Check for updates'}
+                icon={RefreshCw}
+                busy={checkingUpdate}
+                onPress={checkUpdates}
+              />
+            )}
           </View>
-        </View>
+        </Group>
       </ScrollView>
 
       <Sheet visible={picker === 'lock'} onClose={() => setPicker(null)} title="Lock again">
@@ -222,5 +284,6 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   topBar: { flexDirection: 'row', alignItems: 'center', gap: space[1], paddingHorizontal: space[2], paddingBottom: space[2] },
-  about: { flexDirection: 'row', gap: space[3], padding: space[4], borderRadius: 16, borderWidth: StyleSheet.hairlineWidth },
+  aboutBody: { padding: space[4], gap: space[4] },
+  aboutHeader: { flexDirection: 'row', gap: space[3] },
 });
