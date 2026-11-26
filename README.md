@@ -1,59 +1,247 @@
-# Cards
+<p align="center">
+  <img src="docs/banner.svg" width="100%" alt="Cards: your physical cards on your phone. 100% offline, no account, encrypted, no tracking, open source" />
+</p>
 
-Your physical cards on your Android phone: bank cards, loyalty cards, memberships and IDs, photographed front and back, shown full screen at full brightness when you need them. **Fully offline, no account, encrypted.**
+<p align="center">
+  <a href="https://github.com/warwickbuilds/cards/releases/latest"><img src="https://img.shields.io/github/v/release/warwickbuilds/cards?style=for-the-badge&label=Latest&logo=github" alt="Latest release" /></a>
+  <a href="https://github.com/warwickbuilds/cards/releases"><img src="https://img.shields.io/github/downloads/warwickbuilds/cards/total?style=for-the-badge&label=Downloads&logo=android&logoColor=white" alt="Total downloads" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/warwickbuilds/cards?style=for-the-badge&label=License" alt="MIT License" /></a>
+</p>
 
-- Add a card in seconds: snap the front and back, give it a name, pick a category.
-- Tap it at the counter: black screen, brightness up, screen stays on, pinch to zoom, rotate to fill the screen.
-- Categories with colours that you can switch on and off.
-- Search, pins, and "most used first" so the card you need is at the top.
-- App lock with fingerprint, face or screen lock; screenshots blocked.
-- Encrypted backup and restore to a file you choose.
+<p align="center">
+  <img src="https://img.shields.io/badge/internet%20permission-none-2E7D32?style=flat-square&logo=android&logoColor=white" alt="No internet permission" />
+  <img src="https://img.shields.io/badge/account-not%20needed-2E7D32?style=flat-square" alt="No account needed" />
+  <img src="https://img.shields.io/badge/tracking%20%26%20analytics-zero-2E7D32?style=flat-square" alt="Zero tracking and analytics" />
+  <img src="https://img.shields.io/badge/ads-none-2E7D32?style=flat-square" alt="No ads" />
+  <img src="https://img.shields.io/badge/encryption-AES--256%20at%20rest-4F46E5?style=flat-square&logo=letsencrypt&logoColor=white" alt="AES-256 encryption at rest" />
+  <img src="https://img.shields.io/badge/app%20lock-biometric-4F46E5?style=flat-square" alt="Biometric app lock" />
+</p>
+
+<p align="center">
+  <a href="https://github.com/warwickbuilds/cards/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/warwickbuilds/cards/ci.yml?branch=main&style=flat-square&label=CI&logo=githubactions&logoColor=white" alt="CI status" /></a>
+  <a href="https://github.com/warwickbuilds/cards/actions/workflows/android-release.yml"><img src="https://img.shields.io/github/actions/workflow/status/warwickbuilds/cards/android-release.yml?style=flat-square&label=APK%20build&logo=android&logoColor=white" alt="APK build status" /></a>
+  <img src="https://img.shields.io/badge/Android-8.0%2B-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Android 8.0 and newer" />
+  <img src="https://img.shields.io/badge/Expo-SDK%2058-000020?style=flat-square&logo=expo&logoColor=white" alt="Expo SDK 58" />
+  <img src="https://img.shields.io/badge/React%20Native-0.88-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React Native 0.88" />
+  <img src="https://img.shields.io/badge/TypeScript-6-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/SQLCipher-encrypted%20SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white" alt="SQLCipher encrypted SQLite" />
+  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="Pull requests welcome" /></a>
+  <a href="https://github.com/warwickbuilds/cards/commits/main"><img src="https://img.shields.io/github/last-commit/warwickbuilds/cards?style=flat-square&label=Last%20commit" alt="Last commit" /></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/warwickbuilds/cards/releases/latest"><b>Download the latest APK</b></a> ·
+  <a href="#install">Install guide</a> ·
+  <a href="#privacy-first-by-design">Privacy</a> ·
+  <a href="#what-it-does">Features</a> ·
+  <a href="#for-developers">For developers</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a>
+</p>
+
+**Cards keeps your physical cards on your Android phone, and nowhere else.** Bank cards, loyalty cards, memberships and IDs, photographed front and back and shown full screen at full brightness when you need them at the counter.
+
+It is a **privacy-first, offline-only, local-first** card wallet: no account, no login, no cloud, no ads, no analytics, no tracking and no AI. The app doesn't even have permission to use the internet. Everything is **encrypted on your device**, locked behind your fingerprint or face, and **you own your data**: back it up to an encrypted file you keep, and take it with you. Free and open source under the [MIT License](LICENSE), so anyone can check every claim on this page.
 
 ## Contents
 
+- [Highlights](#highlights)
+- [Privacy first, by design](#privacy-first-by-design)
+- [What it does](#what-it-does)
 - [Install](#install)
+- [Getting started](#getting-started)
 - [Your data and privacy](#your-data-and-privacy)
+- [FAQ](#faq)
+- [For developers](#for-developers): [tech stack](#tech-stack), [status](#status), [features in detail](#features), [changelog](#versions-and-changelog), [architecture](#architecture), [security model](#security-and-privacy), [services](#services), [releases](#releases), [running it](#running-it), [maintenance](#maintenance), [future enhancements](#future-enhancements)
+- [Contributing](#contributing), [security](#security), [license](#license) and [acknowledgements](#acknowledgements)
+
+## Highlights
+
+| | |
+| --- | --- |
+| 📵 **100% offline** | No internet permission at all. Android itself blocks the app from ever reaching a network, so nothing can leak, even by mistake. |
+| 🙅 **No account, no login** | Install and go. No email, no phone number, no sign-up, no password to forget or to be breached. |
+| 🔐 **Encrypted at rest** | Every card, photo and note lives in an AES-256 encrypted database (SQLCipher). The key is held by Android's hardware-backed Keystore. |
+| 👆 **Biometric app lock** | Fingerprint, face or screen lock on open and after you step away. Screenshots and screen recording are blocked. |
+| 💳 **Show it in one tap** | Black screen, full brightness, screen stays awake, pinch to zoom, rotate to fill the screen for barcodes. |
+| 🗂️ **Organised your way** | Colour-coded categories you can switch on and off, search, pins, and "most used first". |
+| 💾 **Your data, your file** | Encrypted, passphrase-protected backup to a file and folder you choose. Restore on any phone. No cloud required. |
+| 🔍 **Open source** | MIT licensed. Read the code, build it yourself, check the APK's permissions and signature. |
+
+## Privacy first, by design
+
+Most wallet and loyalty-card apps want an account, sync to a cloud, show ads, and ship analytics and crash-reporting SDKs that phone home. Cards does none of that. Your card photos are some of the most sensitive pictures on your phone, so Cards is built on **privacy by design and privacy by default**: there is no server, so there is nothing to collect, nothing to sell and nothing to breach.
+
+| | Cards | Typical wallet / loyalty-card app |
+| --- | --- | --- |
+| Internet access | ❌ **None** (no `INTERNET` permission) | ✅ Always |
+| Account or login | ❌ **Never** | Usually required |
+| Cloud sync of your cards | ❌ **Never** | Often on by default |
+| Ads, analytics, telemetry, crash reporting | ❌ **Zero** | Common |
+| Third-party SDKs that send data | ❌ **None** | Common |
+| AI or "smart" features that upload photos | ❌ **None** | Increasingly common |
+| Encrypted on the device | ✅ **AES-256, hardware-backed key** | Varies |
+| App lock | ✅ **Fingerprint, face or PIN** | Sometimes |
+| Screenshot and recent-apps protection | ✅ **On by default** | Rare |
+| Google cloud backup of your data | ❌ **Switched off on purpose** | Often on |
+| Export your own data | ✅ **Encrypted file you choose where to keep** | Rare |
+| Source code you can audit | ✅ **Open source, MIT** | Rarely |
+
+**What that means in practice**
+
+- **Zero data collection.** Cards collects nothing. There's no developer server, no analytics, no telemetry, no crash reports, no usage stats, no advertising ID. Not even an update check.
+- **Offline-only, not just offline-first.** The release APK has no `INTERNET` permission, so it physically cannot send or receive anything over Wi-Fi or mobile data. This is enforced by Android, not by a promise. [Check it yourself](#check-it-yourself).
+- **No account, no identity.** The app never knows who you are. Nothing to sign up for, nothing to log in to, no password reuse risk.
+- **Encrypted at rest.** The whole database, photos included, is encrypted with SQLCipher (AES-256). The 256-bit key is random, made on your phone, and protected by the hardware-backed Android Keystore. Photos are stored **inside** the encrypted database, never as loose image files.
+- **Locked when you're not looking.** Biometric or PIN app lock, re-locking after the time you choose. `FLAG_SECURE` blocks screenshots and screen recording and blanks the app in the recent-apps switcher.
+- **Minimal permissions.** Only the camera (to photograph a card) and biometrics (for the lock). Storage, media, microphone and network permissions are explicitly blocked. The gallery uses Android's private photo picker.
+- **Data ownership and portability.** Your cards are yours. Export them any time to an encrypted `.cardsbackup` file (PBKDF2 + AES-256-GCM, with your passphrase), keep it wherever you like, and restore it on another phone.
+- **Nothing in Google's cloud.** Android's automatic cloud backup is switched off for Cards, so your card photos never end up in a Google Drive backup.
+- **Transparent and auditable.** Every line is open source, every release is built by GitHub Actions from this repo, and every APK is signed with one published certificate.
+
+Read the full [Privacy policy](PRIVACY.md) (it's short, because there's nothing to collect) and the technical [security model](#security-and-privacy).
+
+### Check it yourself
+
+You don't have to take our word for it. With the Android SDK build tools on a computer:
+
+```bash
+# No android.permission.INTERNET in the list
+aapt2 dump permissions cards-<version>-arm64.apk
+
+# Signed with the published release certificate (see SECURITY.md)
+apksigner verify --print-certs cards-<version>-arm64.apk
+```
+
+On the phone itself: **Settings → Apps → Cards → Permissions** (or **App info → Other permissions**) shows only Camera and Biometric, and **Mobile data & Wi-Fi** shows no data used, ever.
+
+## What it does
+
+- **Add a card in seconds.** Snap the front and back (or pick from the gallery), cropped to card shape automatically. Give it a name, a category and optional notes.
+- **Show it at the counter.** Tap a card: black screen, brightness up, screen stays on. Flip front and back, pinch or double-tap to zoom, rotate it sideways to fill the screen so barcodes scan first time, or tap for an immersive view with nothing else on screen.
+- **Find it fast.** Pinned cards first, then your categories in your order. "Most used first" puts the card you reach for at the top. Search matches names, notes and categories, ignoring case and accents.
+- **Categories you control.** Bank, Loyalty, ID and Membership to start. Rename, recolour (11 colours), reorder, add your own, and switch a whole category off to hide it from home.
+- **Locked and private.** App lock with fingerprint, face or screen lock; screenshots blocked; blank in recent apps.
+- **Encrypted backup and restore.** Back up to a passphrase-protected file in a folder you choose (Downloads, a USB drive, anywhere). Restore by adding to your cards or replacing them; a restore either fully works or changes nothing.
+- **Light and dark.** Follows your phone. The card viewer is always black, which scanners and OLED screens like best.
+
+## Install
+
+Cards isn't on the Play Store (that would mean a Google developer account, Play services and policies it doesn't need). You install the signed APK straight from GitHub Releases.
+
+1. On the phone, open the [latest release](https://github.com/warwickbuilds/cards/releases/latest) and download `cards-<version>-arm64.apk`. It fits almost every phone from the last several years. If Android says it can't install it (older 32-bit phones), download `cards-<version>-universal.apk` instead.
+2. Open the downloaded file. Android asks whether your browser (or Files app) may install unknown apps. Tap **Settings**, turn on **Allow from this source**, then go back and tap **Install**. You only need to do this once.
+3. **Play Protect** may say the app is unrecognised because it isn't from the Play Store. Tap **More details → Install anyway**.
+4. Open Cards. That's it: no sign-up screen.
+
+**Updating**: Cards has no internet access, so it never checks for updates itself. Come back to [Releases](https://github.com/warwickbuilds/cards/releases) (or press **Watch → Custom → Releases** on GitHub to be emailed) and install the new APK over the old one. Your cards are kept. Every release is signed with the same key, so this always works. If Android ever says the app "conflicts with an existing package", the APK was signed with a different key: **don't uninstall to get around it, because that deletes your cards.** Make a backup first.
+
+Builds from pull requests are signed with a debug key and can't be installed over a release.
+
+## Getting started
+
+1. Open Cards. If your phone has a screen lock, the app lock is already on (after 1 minute in the background); change it in **Settings**.
+2. Tap **+** to add your first card. Tap the front slot, take a photo, and crop it. Do the same for the back.
+3. Give it a name, pick a category (or tap **New…**), and save. It opens straight away so you can see how it'll look at the till.
+4. Long-press any card to **Edit**, **Pin** or **Delete**. Manage categories with the folder button at the top of home, and settings with the gear next to it.
+5. Go to **Settings → Back up** and make your first encrypted backup. Keep the file and its passphrase somewhere safe.
+
+Reinstalling or on a new phone? Go to **Settings → Restore**, pick your `.cardsbackup` file and enter its passphrase.
+
+## Your data and privacy
+
+- **Everything stays on your phone.** Cards has no internet permission, so it can't send anything anywhere. No account, no ads, no analytics, no AI.
+- Your cards, photos and notes are stored in an **encrypted database**. The key is kept in Android's hardware-backed Keystore and never leaves the phone.
+- **Uninstalling the app, or clearing its storage, deletes your cards permanently.** Android's own cloud backup is switched off for this app on purpose (so your card photos never end up in a Google backup), and there's no Cards cloud to recover from. Make a backup in **Settings → Back up** and keep the file somewhere safe, ideally off the phone.
+- Backups are encrypted with a passphrase you choose. Without the passphrase nobody, including you and including us, can open one, so don't forget it.
+- **Delete everything** in Settings wipes every card, photo and category (after your fingerprint or PIN).
+- The full details are in the [Privacy policy](PRIVACY.md).
+
+## FAQ
+
+**Can Cards pay at a terminal with NFC like Google Wallet?**
+No. It shows a photo of your card for things like loyalty barcodes, membership checks or reading a number. Tap-to-pay needs a bank's tokenised integration, which needs a network and an account. Cards deliberately has neither.
+
+**Is it safe to keep photos of bank cards in it?**
+Safer than in your gallery, which is unencrypted and often synced to the cloud. In Cards they're encrypted, locked behind your biometrics, hidden from screenshots and never uploaded. See the [security model](#security-and-privacy) for the honest limits (for example, someone who knows your phone's PIN can open the app).
+
+**What happens if I lose my phone?**
+Without your screen lock, the app won't open, and the database on the storage is encrypted. To get your cards back on a new phone you need a backup file and its passphrase, so make one now.
+
+**Why no cloud sync?**
+Because the safest data is data that never leaves the device. A cloud means an account, a server, a company holding your card photos and a target for breaches. Use an encrypted backup file and move it yourself.
+
+**Why isn't it on the Play Store?**
+It may be one day. For now, GitHub Releases keeps it simple, free and transparent: the APK is built in public from this repo.
+
+---
+
+# For developers
+
+Everything below is about how the app is built, released and maintained.
+
+`docs/DESIGN.md` explains the UX research and design choices. `AGENTS.md` has the Expo rules for this SDK. `CLAUDE.md` has the standing rules for every PR.
+
+## Tech stack
+
+<p>
+  <img src="https://img.shields.io/badge/Expo-000020?style=flat-square&logo=expo&logoColor=white" alt="Expo" />
+  <img src="https://img.shields.io/badge/React%20Native-20232A?style=flat-square&logo=react&logoColor=61DAFB" alt="React Native" />
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/SQLite%20%2B%20SQLCipher-003B57?style=flat-square&logo=sqlite&logoColor=white" alt="SQLite with SQLCipher" />
+  <img src="https://img.shields.io/badge/Android%20Keystore-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Android Keystore" />
+  <img src="https://img.shields.io/badge/Jest-C21325?style=flat-square&logo=jest&logoColor=white" alt="Jest" />
+  <img src="https://img.shields.io/badge/ESLint-4B32C3?style=flat-square&logo=eslint&logoColor=white" alt="ESLint" />
+  <img src="https://img.shields.io/badge/GitHub%20Actions-2088FF?style=flat-square&logo=githubactions&logoColor=white" alt="GitHub Actions" />
+</p>
+
+| Layer | What's used |
+| --- | --- |
+| App | Expo SDK 58 (development build, not Expo Go), React Native 0.88, React 19, TypeScript, Expo Router |
+| Data | SQLite with SQLCipher (AES-256) through expo-sqlite; plain SQL with numbered migrations (`PRAGMA user_version`); photos as JPEG inside the database |
+| Keys and crypto | expo-secure-store (Android Keystore) for the database key; expo-crypto AES-256-GCM and @noble/hashes PBKDF2 for backups |
+| Security | expo-local-authentication (biometric lock), expo-screen-capture (`FLAG_SECURE`), no `INTERNET` permission, `allowBackup: false` |
+| UI | Custom tokens with light and dark mode, lucide icons, Reanimated and Gesture Handler for zoom and pan |
+| Phone features | expo-image-picker (camera and system photo picker), expo-image-manipulator (crop, rotate, resize), expo-brightness, expo-keep-awake |
+| Quality | Jest (jest-expo), TypeScript, ESLint, and a CI workflow on every pull request |
+| Releases | GitHub Actions builds and signs arm64 and universal APKs with Gradle and publishes them to GitHub Releases |
+
+Full versions are in [Main dependency versions](#main-dependency-versions).
+
+## Developer contents
+
+- [Tech stack](#tech-stack)
 - [Status](#status)
 - [Features](#features)
 - [Versions and changelog](#versions-and-changelog)
 - [Architecture](#architecture)
 - [Security and privacy](#security-and-privacy)
 - [Services](#services)
-- [Running it](#running-it)
 - [Releases](#releases)
+- [Running it](#running-it)
 - [Maintenance](#maintenance)
 - [Future enhancements](#future-enhancements)
-
-## Install
-
-1. Until the first release is published, download the APK from the **cards-<version>-apks** artifact on the latest successful **Android release** run in the Actions tab (it's a zip; unzip it on the phone and open `cards-<version>-arm64.apk`). After a release, take it from [Releases](https://github.com/warwickbuilds/cards/releases/latest) instead.
-2. Android asks whether your browser or Files app may install unknown apps: tap **Settings**, turn on **Allow from this source**, go back and tap **Install**.
-3. If Play Protect says the app is unrecognised, tap **More details → Install anyway**.
-
-Builds from pull requests are signed with a debug key. A later signed release can't install over them, so uninstall first (after making a backup).
-
-## Your data and privacy
-
-- Everything stays on your phone. Cards has **no internet permission at all**, so it can't send anything anywhere, even by mistake. No account, no ads, no analytics, no AI.
-- Your cards, photos and notes are stored in an **encrypted database**. The key is kept in Android's hardware-backed keystore.
-- **Uninstalling the app, or clearing its storage, deletes your cards.** Android's own cloud backup is switched off for this app on purpose (so your card photos never end up in a Google backup). Make a backup in **Settings → Back up** and keep the file somewhere safe.
-- Backups are encrypted with a passphrase you choose. Without the passphrase nobody (including you) can open one, so don't forget it.
+- [Contributing](#contributing), [Security](#security), [License](#license), [Acknowledgements](#acknowledgements)
 
 ## Status
 
-Version **0.1.1**: fixes 0.1.0 not opening on a phone.
+Version **0.1.1**, released 2026-11-26 ([v0.1.1](https://github.com/warwickbuilds/cards/releases/tag/v0.1.1)): fixes 0.1.0 not opening on a phone.
 
 | Area | State |
 | --- | --- |
-| Cards: add, edit, delete, front and back photos, notes, pin | Done |
-| Categories: add, rename, colour, reorder, switch on/off, delete | Done |
-| Home: grouped by category, pinned first, search, category chips, sort | Done |
-| Full-screen viewer: full brightness, keep awake, zoom, rotate, immersive | Done |
-| Security: encrypted database, app lock, screenshot blocking, no network | Done |
-| Encrypted backup and restore (merge or replace) | Done |
+| Cards: add, edit, delete, front and back photos, notes, pin | Done (PR #1) |
+| Categories: add, rename, colour, reorder, switch on/off, delete | Done (PR #1) |
+| Home: grouped by category, pinned first, search, category chips, sort | Done (PR #1) |
+| Full-screen viewer: full brightness, keep awake, zoom, rotate, immersive | Done (PR #1) |
+| Security: encrypted database, app lock, screenshot blocking, no network | Done (PR #1, #2) |
+| Encrypted backup and restore (merge or replace) | Done (PR #1) |
+| Signed APKs on GitHub Releases | Done (v0.1.0, v0.1.1) |
+| Open source polish: privacy-first README, banner and badges, privacy policy, security policy, contributing guide, code of conduct, issue templates | Done (PR #3) |
 | Tested on a real phone | 0.1.0 failed on first launch (fixed in 0.1.1); 0.1.1 not yet confirmed on a phone |
+| Screenshots in the README | Planned (needs demo cards, never real ones) |
 
 ## Features
+
+The detailed list of what works now.
 
 ### Home
 
@@ -103,6 +291,7 @@ Version **0.1.1**: fixes 0.1.0 not opening on a phone.
 
 | Version | Date | PR | Changes |
 | --- | --- | --- | --- |
+| 0.1.1 (docs) | 2026-11-26 | #3 | Docs and repo only, no app change: privacy-first README with banner, badges, highlights, a privacy comparison and FAQ, user guide first and developer details below; new PRIVACY.md, CODE_OF_CONDUCT.md and CONTRIBUTING.md; fuller SECURITY.md with the release certificate; bug and feature issue forms. |
 | 0.1.1 | 2026-11-26 | #2 | Fix: 0.1.0 stopped on launch with "file is not a database". Writes ran on a second database connection that never got the encryption key. All writes now run, one at a time, on the one encrypted connection (`src/db/transaction.ts`). An install of 0.1.0 opens fine after updating, no reinstall needed. |
 | 0.1.0 | 2026-11-26 | #1 | First version: cards with front/back photos and notes, categories with on/off, home grouped by category with search, full-brightness viewer with zoom and rotate, app lock, encrypted database, encrypted backup and restore, no internet permission. |
 
@@ -180,6 +369,9 @@ src/security/    app lock and screenshot blocking
 src/theme/       colours, tokens, light/dark
 plugins/         config plugins: release signing, ABI splits, version code
 docs/DESIGN.md   UX research and design decisions
+docs/banner.svg  README banner (follows light and dark mode)
+.github/         CI and release workflows, PR template, issue forms
+PRIVACY.md, SECURITY.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md   project policies
 ```
 
 ## Security and privacy
@@ -194,6 +386,8 @@ docs/DESIGN.md   UX research and design decisions
 | Cloud/adb backups | `allowBackup: false`, so Android never copies the database (or its key) into Google backups. |
 | Backup files | `.cardsbackup`: PBKDF2-HMAC-SHA256 (150,000 iterations, random salt) → AES-256-GCM with the header as authenticated data. Wrong passphrase or any tampering fails cleanly. Restored data is validated (ids, sizes, JPEG signatures, references) before anything is changed, and applied in one transaction. |
 | Over-broad permissions | Only camera and biometric permissions. Microphone, storage, media, overlay, settings and network-state permissions are explicitly blocked. The gallery uses Android's photo picker (no storage permission). |
+
+Release APKs are signed with one key; its certificate SHA-256 is `5d88d9a692842701578e71c4456eaceaabe5a46639dad2f508359d122c0bad5e` (see [SECURITY.md](SECURITY.md#checking-a-download)).
 
 Limits worth knowing: anyone who knows your phone's screen-lock PIN can open the app (that's how Android biometrics work); a rooted or compromised phone can read app memory while it's unlocked; and a backup is only as strong as its passphrase.
 
@@ -264,3 +458,33 @@ Pull requests that touch the build set-up also build both APKs (debug-signed if 
 - **Scheduled reminder to back up**, since uninstalling deletes everything.
 - **Hardware-bound key with biometrics** (`requireAuthentication` on the database key) for even stronger at-rest protection, at the cost of losing data if fingerprints are re-enrolled.
 - **Optional decoy/stealth mode**: hide sensitive categories behind a second unlock.
+- **Screenshots in this README** made with demo cards (never real ones), in light and dark.
+- **F-Droid listing**: Cards is offline, open source and has no proprietary services, which is exactly what F-Droid is for. Needs reproducible-build checks.
+- **Reproducible builds**, so anyone can rebuild an APK from a tag and get the same bytes as the release.
+- **Play Store listing**, with a Data Safety form that says "No data collected, no data shared".
+
+## Contributing
+
+Bug reports, ideas and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) for the ground rules (fully offline, no network, analytics or AI; no real card photos in the repo; every PR updates this README) and how to run the checks. Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+- [Report a bug](https://github.com/warwickbuilds/cards/issues/new?template=bug_report.yml)
+- [Suggest an idea](https://github.com/warwickbuilds/cards/issues/new?template=feature_request.yml)
+
+## Security
+
+Please report security problems privately through the repo's [Security tab](https://github.com/warwickbuilds/cards/security), not as a public issue. [SECURITY.md](SECURITY.md) explains what's in scope, how the release keystore is kept out of the repo, and how to check an APK's signature. [PRIVACY.md](PRIVACY.md) is the privacy policy.
+
+## License
+
+[MIT](LICENSE) © 2026 warwickbuilds. You're free to use, change and share the code, as long as the copyright notice comes with it.
+
+The Code of Conduct is adapted from the [Contributor Covenant](https://www.contributor-covenant.org) (CC BY 4.0).
+
+## Acknowledgements
+
+- [Expo](https://expo.dev) and [React Native](https://reactnative.dev)
+- [SQLCipher](https://www.zetetic.net/sqlcipher/) by Zetetic, for the encrypted database
+- [@noble/hashes](https://github.com/paulmillr/noble-hashes) by Paul Miller, for audited PBKDF2
+- [lucide](https://lucide.dev) icons
+- [Catima](https://catima.app), the open-source offline loyalty-card app, for showing how it should be done
+- Badges by [shields.io](https://shields.io)

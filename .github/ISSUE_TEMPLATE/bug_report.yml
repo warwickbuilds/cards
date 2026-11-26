@@ -1,0 +1,78 @@
+name: Bug report
+description: Something in the app doesn't work the way it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this.
+        **Never include photos of real cards, card numbers, ID details or a backup file.** Use a made-up card in any screenshot.
+        Security problems go through the [Security tab](https://github.com/warwickbuilds/cards/security), not here.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What went wrong, and what did you expect to happen instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a card
+        2. Tap ...
+        3. See ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Shown at the bottom of Settings
+      placeholder: "0.1.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: apk
+    attributes:
+      label: Which APK?
+      options:
+        - arm64
+        - universal
+        - Don't know
+        - Development build
+  - type: input
+    id: phone
+    attributes:
+      label: Phone and Android version
+      placeholder: "Pixel 9, Android 16"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of the app?
+      multiple: true
+      options:
+        - Home, search and sorting
+        - Showing a card (viewer)
+        - Adding or editing a card, photos and cropping
+        - Categories
+        - App lock and screenshot blocking
+        - Backup and restore
+        - Settings
+        - Installing and updating
+        - Other
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: My report and screenshots contain no real card photos, card numbers or personal details
+          required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots or anything else
+      description: Screenshots (made-up cards only), a screen recording, or anything else that helps.

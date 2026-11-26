@@ -1,0 +1,25 @@
+name: Feature request
+description: Suggest an idea for the app
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check [Future enhancements](https://github.com/warwickbuilds/cards#future-enhancements) first: your idea may already be planned.
+        Cards is fully offline with no accounts, cloud, tracking or AI, so ideas need to work entirely on the phone.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would you like to do?
+      description: The problem or goal, in your own words. "I want my gym card to open with one tap from the home screen" is perfect.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How could the app help?
+      description: Your idea for how it could work. Sketches and screenshots of other apps are welcome (no real cards, please).
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Anything you do today instead?
