@@ -196,14 +196,14 @@ Everything below is about how the app is built, released and maintained.
 
 | Layer | What's used |
 | --- | --- |
-| App | Expo SDK 58 (development build, not Expo Go), React Native 0.88, React 19, TypeScript, Expo Router |
-| Data | SQLite with SQLCipher (AES-256) through expo-sqlite; plain SQL with numbered migrations (`PRAGMA user_version`); photos as JPEG inside the database |
+| App | Expo SDK 58 (development build, not Expo Go), React Native 0.88 (Hermes V1), React 19, TypeScript 6, Expo Router, Android 16+ (API 36, `arm64-v8a` only) |
+| Data | SQLite with SQLCipher (AES-256, WAL + `synchronous=NORMAL`) through expo-sqlite; plain SQL with numbered migrations (`PRAGMA user_version`); photos as JPEG inside the database; scoped store invalidation |
 | Keys and crypto | expo-secure-store (Android Keystore) for the database key; expo-crypto AES-256-GCM and @noble/hashes PBKDF2 for backups |
-| Security | expo-local-authentication (biometric lock), expo-screen-capture (`FLAG_SECURE`), no `INTERNET` permission, `allowBackup: false` |
+| Security | expo-local-authentication (biometric lock), expo-screen-capture (`FLAG_SECURE`), no `INTERNET` permission, `allowBackup: false`, `networkInspector: false` |
 | UI | Custom tokens with light and dark mode, lucide icons, Reanimated and Gesture Handler for zoom and pan |
-| Phone features | expo-image-picker (camera and system photo picker), expo-image-manipulator (crop, rotate, resize), expo-brightness, expo-keep-awake |
-| Quality | Jest (jest-expo), TypeScript, ESLint, and a CI workflow on every pull request |
-| Releases | GitHub Actions builds and signs a single R8-shrunk `arm64-v8a` APK (Android 16+ / Pixel 10+) with Gradle, verifies offline permissions with `aapt2`, and publishes to GitHub Releases |
+| Phone features | expo-image-picker (camera and system photo picker), expo-image-manipulator (single-decode crop, rotate, resize), expo-brightness, expo-keep-awake |
+| Quality | Jest (jest-expo + real SQLite `node:sqlite` repo tests), TypeScript, ESLint, `expo-doctor`, and CI + APK verification workflows on pull requests |
+| Releases | GitHub Actions builds and signs a single R8-shrunk `arm64-v8a` APK (Android 16+ / Pixel 10+, uncompressed 16 KB-aligned `.so`) with Gradle, verifies offline permissions with `aapt2`, and publishes to GitHub Releases |
 
 Full versions are in [Main dependency versions](#main-dependency-versions).
 
@@ -236,7 +236,8 @@ Version **0.2.0** (PR #5): Android 16+ (Pixel 10+, `arm64-v8a`) cleanup, perform
 | Encrypted backup and restore (merge or replace) | Done (PR #1, #5) |
 | Signed APKs on GitHub Releases | Done (v0.1.0, v0.1.1; single `arm64-v8a` APK from v0.2.0) |
 | Open source polish: privacy-first README, banner and badges, privacy policy, security policy, contributing guide, code of conduct, issue templates | Done (PR #3) |
-| Tested on a real phone | 0.1.0 failed on first launch (fixed in 0.1.1); 0.2.0 ready for Pixel 10 testing |
+| Cloud dev environment setup (`.agents/environment.json`) | Done (PR #4) |
+| Tested on a real phone | 0.1.0 failed on first launch (fixed in 0.1.1); 0.2.0 APK built cleanly in CI and ready for Pixel 10 testing |
 | Screenshots in the README | Planned (needs demo cards, never real ones) |
 
 ## Features
@@ -245,7 +246,7 @@ The detailed list of what works now.
 
 ### Home
 
-- Cards are shown as card-shaped photos in two columns, with the name underneath (never written over the photo).
+- Cards are shown as card-shaped photos in two columns (front photo, falling back to back if only the back was photographed), with the name underneath (never written over the photo).
 - **Pinned** cards come first, then one section per category (in your order, with its colour), then cards with no category.
 - **Search** matches names, notes and category names, ignoring case and accents. It also finds cards in switched-off categories.
 - **Category chips** filter to one category.
@@ -256,9 +257,9 @@ The detailed list of what works now.
 ### Showing a card
 
 - Opens on a black screen at **full brightness** (toggle with the sun button; default in Settings) and keeps the screen on.
-- **Front/Back** switch, **pinch or double-tap to zoom**, drag when zoomed.
+- **Front/Back** switch (shown when both sides have photos), **pinch or double-tap to zoom**, drag when zoomed.
 - **Rotate** turns the card sideways to fill the screen, handy for barcodes.
-- **Tap the card** for an immersive view with nothing else on screen.
+- **Tap the card** for an immersive view with nothing else on screen (Android back exits immersive view first).
 - Name, category and notes underneath (notes can be selected and copied).
 - Every opening is counted for "Most used first".
 
@@ -280,7 +281,7 @@ The detailed list of what works now.
 - **App lock** (fingerprint, face or screen lock) and **Lock again** after immediately, 30 seconds, 1, 5 or 15 minutes in the background. Default on, after 1 minute. Needs a screen lock on the phone.
 - **Block screenshots** (default on): also blanks the app in the recent-apps view.
 - **Full brightness**, **Order**, **Show switched-off categories**, **Crop photos to card shape**.
-- **Back up**, **Restore**, **Delete everything** (asks for your fingerprint/PIN first).
+- **Back up**, **Restore**, **Delete everything** (asks for your fingerprint/PIN first; resets categories back to the defaults).
 
 ### Backup and restore
 
@@ -334,9 +335,10 @@ SQLite + SQLCipher on the phone (src/db/database.ts, schema and migrations in sr
 
 Pure logic (src/lib: wallet grouping and sorting, search, backup format and checks,
 lock timing, passphrase strength) has no native imports and is unit tested.
+The SQLite repository (src/db/repo.ts) is integration tested against real SQLite (node:sqlite).
 ```
 
-Why this shape (and not the calories-and-steps one): that app uses Drizzle and stores photos as files. Cards keeps photos **inside the encrypted database** so they share its encryption, a card is always saved whole in one transaction, and there are no image files to leak or clean up. With only three tables, plain SQL with numbered migrations (`PRAGMA user_version`) is simpler than an ORM and has fewer dependencies.
+Why this shape (and not the calories-and-steps one): that app uses Drizzle and stores photos as files. Cards keeps photos **inside the encrypted database** so they share its encryption, a card is always saved whole in one transaction, and there are no image files to leak or clean up. With only four tables, plain SQL with numbered migrations (`PRAGMA user_version`) is simpler than an ORM and has fewer dependencies.
 
 ### Screens
 
@@ -384,10 +386,10 @@ PRIVACY.md, SECURITY.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md   project policies
 | Data leaving the phone | No `INTERNET` permission in release builds (removed in `app.config.js` and enforced in CI via `aapt2 dump permissions`), so the OS blocks all network access. No analytics or crash reporting libraries. |
 | Someone with the unlocked phone | App lock with Android's biometric prompt or screen lock (`expo-local-authentication`), on launch and after the chosen time in the background. Screens aren't mounted before initial unlock, bottom-sheet modals hide automatically while locked, and external camera/picker flows use a bounded 5-minute grace window. |
 | Shoulder-surfing / screenshots / recent apps | `FLAG_SECURE` (`expo-screen-capture`) blocks screenshots and screen recording and blanks the app in the app switcher. |
-| Phone storage read off the device | Database encrypted with SQLCipher (AES-256). Key is 32 random bytes in `expo-secure-store`, encrypted by the hardware-backed Android Keystore. `secure_delete` overwrites deleted rows. |
-| Leftover photo files | Camera, crop and resize outputs are deleted immediately after reading; the cache folders are swept on launch. `expo-image` is told not to cache card photos on disk. |
+| Phone storage read off the device | Database encrypted with SQLCipher (AES-256). Key is 32 random bytes in `expo-secure-store`, encrypted by the hardware-backed Android Keystore (never silently overwritten if an encrypted database already exists). `secure_delete` overwrites deleted rows. |
+| Leftover photo files | Camera, crop and resize outputs are deleted immediately after reading; native image refs are released; cache folders are swept on launch and after capture. `expo-image` is told not to cache card photos on disk. |
 | Cloud/adb backups | `allowBackup: false`, so Android never copies the database (or its key) into Google backups. |
-| Backup files | `.cardsbackup`: PBKDF2-HMAC-SHA256 (150,000 iterations, random salt) → AES-256-GCM with the header as authenticated data. Wrong passphrase or any tampering fails cleanly. Restored data is validated (ids, sizes, positive dimensions, JPEG signatures, references) before anything is changed, and applied in one transaction. |
+| Backup files | `.cardsbackup`: PBKDF2-HMAC-SHA256 (150,000 iterations, random salt) → AES-256-GCM with the header as authenticated data. Wrong passphrase or any tampering fails cleanly, and passphrases are cleared from state right after encrypting or decrypting. Restored data is validated (header version, format, ids, sizes, positive dimensions, JPEG signatures, references) before anything is changed, and applied in one transaction. |
 | Over-broad permissions | Only camera and biometric permissions. Microphone, storage, media, overlay, settings and network-state permissions are explicitly blocked. The gallery uses Android's photo picker (no storage permission). |
 
 Release APKs are signed with one key; its certificate SHA-256 is `5d88d9a692842701578e71c4456eaceaabe5a46639dad2f508359d122c0bad5e` (see [SECURITY.md](SECURITY.md#checking-a-download)).
@@ -401,12 +403,13 @@ None. Cards talks to no outside service, needs no keys and has no accounts. Andr
 ## Running it
 
 ```bash
-npm install
-npm test            # unit tests (jest)
-npm run typecheck   # TypeScript
-npm run lint        # ESLint (Expo + React Compiler rules)
+npm ci
+npm test                     # unit + SQLite repo tests (jest)
+npm run typecheck            # TypeScript
+npm run lint                 # ESLint (Expo + React Compiler rules)
+npx expo-doctor              # SDK & dependency health check
 npx expo export -p android   # bundle check
-npm run android     # development build on a connected phone/emulator (sets CARDS_DEV=1)
+npm run android              # development build on a Pixel 10+ / Android 16+ device or emulator (sets CARDS_DEV=1)
 ```
 
 `CARDS_DEV=1` keeps the INTERNET permission so a development build can reach Metro. Without it (every release and CI build) the permission is removed. Expo Go can't run this app (SQLCipher and other native modules); use a development build.

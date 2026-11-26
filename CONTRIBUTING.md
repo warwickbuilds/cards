@@ -23,12 +23,12 @@ These are the app's standing rules. A PR that breaks one will be asked to change
 
 ## Setting up
 
-You need Node 22, npm, and an Android phone or emulator. The app runs in an Expo development build (not Expo Go) because it uses SQLCipher and other native modules.
+You need Node 22, npm, and an Android 16+ phone or emulator (Pixel 10 and newer, `arm64-v8a`). The app runs in an Expo development build (not Expo Go) because it uses SQLCipher and other native modules.
 
 ```bash
 git clone https://github.com/warwickbuilds/cards.git
 cd cards
-npm install
+npm ci
 npm run android   # builds and installs a development build (sets CARDS_DEV=1)
 ```
 
@@ -36,12 +36,13 @@ npm run android   # builds and installs a development build (sets CARDS_DEV=1)
 
 ## Before you open a pull request
 
-Run all four checks. CI runs the same ones on every pull request.
+Run all checks. CI runs the same ones on every pull request.
 
 ```bash
 npm test
 npm run typecheck
 npm run lint
+npx expo-doctor
 npx expo export -p android
 ```
 
