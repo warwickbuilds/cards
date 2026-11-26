@@ -1,19 +1,23 @@
 import { router } from 'expo-router';
 import {
   ArrowDownUp,
+  Bug,
   Check,
   ChevronLeft,
   ChevronRight,
+  Code2,
   Crop,
   Download,
   ExternalLink,
   EyeOff,
+  FileText,
   Fingerprint,
   FolderCog,
   RefreshCw,
   ScreenShareOff,
   ShieldCheck,
   Sun,
+  Tag,
   Timer,
   Trash2,
   Upload,
@@ -27,7 +31,7 @@ import { useDb, useSettings } from '@/db/DataProvider';
 import { eraseEverything, setSetting } from '@/db/repo';
 import { lockAfterLabel } from '@/lib/lockPolicy';
 import { LOCK_AFTER_CHOICES, type SortMode } from '@/lib/types';
-import { checkForUpdate, installedVersion, type CheckResult } from '@/lib/updates';
+import { checkForUpdate, installedVersion, releasesRepo, repoUrl, type CheckResult } from '@/lib/updates';
 import { useSecurity } from '@/security/SecurityProvider';
 import { useTheme } from '@/theme/ThemeProvider';
 import { layout, space } from '@/theme/tokens';
@@ -44,6 +48,10 @@ export default function SettingsScreen() {
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateResult, setUpdateResult] = useState<CheckResult | null>(null);
   const chevron = <ChevronRight size={20} color={colors.textFaint} />;
+  const externalIcon = <ExternalLink size={18} color={colors.textFaint} />;
+  const version = installedVersion() ?? '?';
+  const repo = releasesRepo();
+  const github = repoUrl();
 
   const toggleLock = async (on: boolean) => {
     // Prove the fingerprint/PIN works before relying on it, and before turning protection off.
@@ -199,18 +207,12 @@ export default function SettingsScreen() {
           <Row icon={Trash2} title="Delete everything" danger onPress={eraseAll} />
         </Group>
 
-        <Group title="About">
-          <View style={styles.aboutBody}>
-            <View style={styles.aboutHeader}>
-              <ShieldCheck size={22} color={colors.textMuted} />
-              <View style={{ flex: 1, gap: 4 }}>
-                <T variant="bodyStrong">Version {installedVersion() ?? '?'}</T>
-                <T variant="caption" color={colors.textMuted}>
-                  Your cards stay encrypted on this phone with no account and no tracking. Cards never checks the network in the
-                  background; it only contacts GitHub when you tap Check for updates below.
-                </T>
-              </View>
-            </View>
+        <Group title="Updates">
+          <View style={styles.cardBody}>
+            <T variant="bodyStrong">Version {version}</T>
+            <T variant="caption" color={colors.textMuted}>
+              Cards never checks the network in the background. Tap below to check GitHub Releases for a newer APK.
+            </T>
             {updateResult?.status === 'current' ? (
               <T variant="label" color={colors.success}>
                 You have the latest version.
@@ -250,6 +252,53 @@ export default function SettingsScreen() {
             )}
           </View>
         </Group>
+
+        <Group title="About">
+          <View style={styles.cardBody}>
+            <View style={styles.aboutHeader}>
+              <ShieldCheck size={22} color={colors.accent} />
+              <View style={{ flex: 1, gap: 4 }}>
+                <T variant="bodyStrong">Cards {version}</T>
+                <T variant="caption" color={colors.textMuted}>
+                  Open-source, local-first card wallet for Android (MIT License). Card photos and notes stay encrypted on this
+                  phone with SQLCipher (AES-256) and Android Keystore—no account, no cloud sync, no ads and no tracking.
+                </T>
+              </View>
+            </View>
+          </View>
+          {github ? (
+            <>
+              <Row
+                icon={Code2}
+                title="GitHub repository"
+                subtitle={repo ? `github.com/${repo}` : undefined}
+                onPress={() => openExternalLink(github)}
+                right={externalIcon}
+              />
+              <Row
+                icon={Tag}
+                title="Releases"
+                subtitle="Download APKs and changelog"
+                onPress={() => openExternalLink(`${github}/releases`)}
+                right={externalIcon}
+              />
+              <Row
+                icon={FileText}
+                title="Privacy policy"
+                subtitle="Zero data collection"
+                onPress={() => openExternalLink(`${github}/blob/main/PRIVACY.md`)}
+                right={externalIcon}
+              />
+              <Row
+                icon={Bug}
+                title="Report a bug or idea"
+                subtitle="Open an issue on GitHub"
+                onPress={() => openExternalLink(`${github}/issues`)}
+                right={externalIcon}
+              />
+            </>
+          ) : null}
+        </Group>
       </ScrollView>
 
       <Sheet visible={picker === 'lock'} onClose={() => setPicker(null)} title="Lock again">
@@ -284,6 +333,6 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   topBar: { flexDirection: 'row', alignItems: 'center', gap: space[1], paddingHorizontal: space[2], paddingBottom: space[2] },
-  aboutBody: { padding: space[4], gap: space[4] },
+  cardBody: { padding: space[4], gap: space[3] },
   aboutHeader: { flexDirection: 'row', gap: space[3] },
 });

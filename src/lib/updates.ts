@@ -19,6 +19,11 @@ export const installedVersion = (): string | null => Constants.expoConfig?.versi
 export const releasesRepo = (): string | null =>
   (Constants.expoConfig?.extra?.releasesRepo as string | undefined) ?? null;
 
+export const repoUrl = (): string | null => {
+  const repo = releasesRepo();
+  return repo ? `https://github.com/${repo}` : null;
+};
+
 export type CheckResult =
   | { status: 'update'; update: AvailableUpdate }
   | { status: 'current' }
