@@ -4,7 +4,6 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "env": { "CARDS_DEV": "1" },
       "android": { "buildType": "apk" }
     },
     "preview": {

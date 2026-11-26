@@ -106,7 +106,7 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
-      - name: Name the APK and verify signature & offline permissions
+      - name: Name the APK and verify signature & minimal permissions
         id: apk
         env:
           EXPECTED_SHA256: ${{ secrets.ANDROID_CERT_SHA256 }}
@@ -119,8 +119,8 @@ jobs:
           AAPT2=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
           echo "APK permissions:"
           "$AAPT2" dump permissions "$ARM64" | tee perms.txt
-          if grep -q 'android\.permission\.INTERNET' perms.txt; then
-            echo "::error::$ARM64 includes android.permission.INTERNET! Release builds must be fully offline."
+          if grep -Eq 'android\.permission\.(RECORD_AUDIO|READ_EXTERNAL_STORAGE|WRITE_EXTERNAL_STORAGE|READ_MEDIA_|ACCESS_FINE_LOCATION|ACCESS_COARSE_LOCATION|READ_CONTACTS|SYSTEM_ALERT_WINDOW|WRITE_SETTINGS|ACCESS_NETWORK_STATE|ACCESS_WIFI_STATE)' perms.txt; then
+            echo "::error::$ARM64 includes a blocked permission!"
             exit 1
           fi
 
@@ -160,7 +160,7 @@ jobs:
           cat > notes.md <<NOTES
           Download **$ARM64** below and open it on your Android 16+ phone (Pixel 10 and newer) to install or update.
 
-          Cards has no internet access, so it never checks for updates itself: come back here for new versions.
+          Cards never checks the network in the background; tap **Settings → Check for updates** inside the app (or come back here) whenever you want to check for a newer release.
           First time? See [Installing on Android](https://github.com/${{ github.repository }}#install).
 
           Installing over an older version keeps your data. Uninstalling deletes it.
