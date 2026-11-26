@@ -18,5 +18,6 @@ Every pull request updates `README.md` in the same PR. Before opening or updatin
 - The app is fully offline. Never add network access, analytics, crash reporting, cloud sync or AI. The release build has no INTERNET permission (`app.config.js`); keep it that way.
 - Never commit real card photos, card numbers or anything derived from them (tests use tiny fake JPEG bytes).
 - Card pictures live only inside the encrypted database. Don't write them to disk as files; delete any temporary file straight after use.
+- Write to the database only through `inTransaction` / `exclusively` in `src/db/transaction.ts`. Never use `withExclusiveTransactionAsync` or `useNewConnection`: a second connection has no SQLCipher key.
 - New tables must be added to the backup (`src/db/repo.ts` export/import and `src/lib/backupData.ts`).
 - Run `npm test`, `npm run typecheck`, `npm run lint` and `npx expo export -p android` before a PR.

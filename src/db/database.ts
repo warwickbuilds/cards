@@ -14,6 +14,7 @@ import * as SecureStore from 'expo-secure-store';
 import { openDatabaseAsync, type SQLiteDatabase } from 'expo-sqlite';
 
 import { MIGRATIONS, STARTER_CATEGORIES } from './schema';
+import { inTransaction } from './transaction';
 
 export const DATABASE_NAME = 'cards.db';
 const KEY_NAME = 'cards.db.key.v1';
@@ -36,7 +37,7 @@ async function migrate(db: SQLiteDatabase) {
   const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
   const current = row?.user_version ?? 0;
   for (let v = current; v < MIGRATIONS.length; v++) {
-    await db.withExclusiveTransactionAsync(async (tx) => {
+    await inTransaction(db, async (tx) => {
       await tx.execAsync(MIGRATIONS[v]);
       if (v === 0) {
         const now = Date.now();
