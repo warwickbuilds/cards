@@ -1,5 +1,5 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
-import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 
 import {
   DEFAULT_SETTINGS,
@@ -13,7 +13,7 @@ import {
 
 import { openDatabase } from './database';
 import { getCard, getCardImages, getSettings, listCardSummaries, listCategories } from './repo';
-import { getVersion, subscribe } from './store';
+import { getVersion, subscribe, type Scope } from './store';
 
 const DbContext = createContext<SQLiteDatabase | null>(null);
 
@@ -42,16 +42,33 @@ export function useDb(): SQLiteDatabase {
   return db;
 }
 
-/** Runs a read, and runs it again after any write. */
-function useLive<T>(read: (db: SQLiteDatabase) => Promise<T>, initial: T, key: string): { data: T; loaded: boolean } {
+/** Runs a read, and runs it again only when its scope changes. */
+function useLive<T>(
+  read: (db: SQLiteDatabase) => Promise<T>,
+  initial: T,
+  key: string,
+  scope: Scope,
+): { data: T; loaded: boolean; error: Error | null } {
   const db = useDb();
-  const version = useSyncExternalStore(subscribe, getVersion, getVersion);
-  const [state, setState] = useState<{ data: T; loaded: boolean; key: string }>({ data: initial, loaded: false, key });
+  const sub = useCallback((listener: () => void) => subscribe(scope, listener), [scope]);
+  const snap = useCallback(() => getVersion(scope), [scope]);
+  const version = useSyncExternalStore(sub, snap, snap);
+  const [state, setState] = useState<{ data: T; loaded: boolean; error: Error | null; key: string }>({
+    data: initial,
+    loaded: false,
+    error: null,
+    key,
+  });
   useEffect(() => {
     let live = true;
     read(db).then(
-      (data) => live && setState({ data, loaded: true, key }),
-      () => live && setState((s) => ({ ...s, loaded: true, key })),
+      (data) => live && setState({ data, loaded: true, error: null, key }),
+      (e: unknown) => {
+        if (!live) return;
+        const err = e instanceof Error ? e : new Error(String(e));
+        if (__DEV__) console.warn(`DB read failed (${key}):`, err);
+        setState((s) => ({ ...s, loaded: true, error: err, key }));
+      },
     );
     return () => {
       live = false;
@@ -60,37 +77,49 @@ function useLive<T>(read: (db: SQLiteDatabase) => Promise<T>, initial: T, key: s
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [db, version, key]);
   // Never show data that belongs to a different key (e.g. another card).
-  return state.key === key ? { data: state.data, loaded: state.loaded } : { data: initial, loaded: false };
+  return state.key === key
+    ? { data: state.data, loaded: state.loaded, error: state.error }
+    : { data: initial, loaded: false, error: null };
 }
 
 const EMPTY_CARDS: CardSummary[] = [];
 const EMPTY_CATS: Category[] = [];
 
 export function useWallet() {
-  const cards = useLive(listCardSummaries, EMPTY_CARDS, 'cards');
-  const categories = useLive(listCategories, EMPTY_CATS, 'categories');
-  return { cards: cards.data, categories: categories.data, loaded: cards.loaded && categories.loaded };
+  const cards = useLive(listCardSummaries, EMPTY_CARDS, 'cards', 'cards');
+  const categories = useLive(listCategories, EMPTY_CATS, 'categories', 'categories');
+  return {
+    cards: cards.data,
+    categories: categories.data,
+    loaded: cards.loaded && categories.loaded,
+    error: cards.error ?? categories.error,
+  };
 }
 
 export function useCategories() {
-  return useLive(listCategories, EMPTY_CATS, 'categories');
+  return useLive(listCategories, EMPTY_CATS, 'categories', 'categories');
 }
 
 export function useCard(id: string | undefined) {
-  return useLive<Card | null>((db) => (id ? getCard(db, id) : Promise.resolve(null)), null, `card:${id}`);
+  return useLive<Card | null>((db) => (id ? getCard(db, id) : Promise.resolve(null)), null, `card:${id}`, 'cards');
 }
 
 const NO_IMAGES: Partial<Record<Side, CardImage>> = {};
 export function useCardImages(id: string | undefined) {
-  return useLive((db) => (id ? getCardImages(db, id) : Promise.resolve(NO_IMAGES)), NO_IMAGES, `images:${id}`);
+  return useLive(
+    (db) => (id ? getCardImages(db, id) : Promise.resolve(NO_IMAGES)),
+    NO_IMAGES,
+    `images:${id}`,
+    'images',
+  );
 }
 
 export function useSettings(): Settings {
-  return useLive(getSettings, DEFAULT_SETTINGS, 'settings').data;
+  return useLive(getSettings, DEFAULT_SETTINGS, 'settings', 'settings').data;
 }
 
 /** Settings plus whether they have been read yet (the lock waits for them). */
 export function useSettingsStatus(): { settings: Settings; loaded: boolean } {
-  const { data, loaded } = useLive(getSettings, DEFAULT_SETTINGS, 'settings');
+  const { data, loaded } = useLive(getSettings, DEFAULT_SETTINGS, 'settings', 'settings');
   return { settings: data, loaded };
 }

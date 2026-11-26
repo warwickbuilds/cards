@@ -44,7 +44,7 @@ export default function SettingsScreen() {
   const toggleLock = async (on: boolean) => {
     // Prove the fingerprint/PIN works before relying on it, and before turning protection off.
     const ok = await confirmIdentity(on ? 'Turn on app lock' : 'Turn off app lock');
-    if (ok) setSetting(db, 'lockEnabled', on);
+    if (ok) setSetting(db, 'lockEnabled', on).catch(() => {});
   };
 
   const eraseAll = async () => {
@@ -52,15 +52,19 @@ export default function SettingsScreen() {
     if (!ok) return;
     Alert.alert(
       'Delete everything?',
-      'Every card, photo and category is removed from this phone. Make a backup first if you might want them back.',
+      'Every card and photo is removed from this phone and categories are reset to defaults. Make a backup first if you might want them back.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete everything',
           style: 'destructive',
           onPress: async () => {
-            await eraseEverything(db);
-            router.dismissTo('/');
+            try {
+              await eraseEverything(db);
+              router.dismissTo('/');
+            } catch {
+              Alert.alert('Couldn’t delete everything', 'Please try again.');
+            }
           },
         },
       ],
@@ -105,7 +109,9 @@ export default function SettingsScreen() {
             title="Block screenshots"
             subtitle="Also hides cards in the recent-apps view"
             value={s.blockScreenshots}
-            onChange={(v) => setSetting(db, 'blockScreenshots', v)}
+            onChange={(v) => {
+              setSetting(db, 'blockScreenshots', v).catch(() => {});
+            }}
           />
         </Group>
 
@@ -116,7 +122,9 @@ export default function SettingsScreen() {
             title="Full brightness"
             subtitle="Turn the screen up when a card is open, for scanners"
             value={s.maxBrightness}
-            onChange={(v) => setSetting(db, 'maxBrightness', v)}
+            onChange={(v) => {
+              setSetting(db, 'maxBrightness', v).catch(() => {});
+            }}
           />
           <Row
             icon={ArrowDownUp}
@@ -129,14 +137,18 @@ export default function SettingsScreen() {
             icon={EyeOff}
             title="Show switched-off categories"
             value={s.showInactive}
-            onChange={(v) => setSetting(db, 'showInactive', v)}
+            onChange={(v) => {
+              setSetting(db, 'showInactive', v).catch(() => {});
+            }}
           />
           <SwitchRow
             icon={Crop}
             title="Crop photos to card shape"
             subtitle="Turn off for tall or odd-shaped cards"
             value={s.cropToCard}
-            onChange={(v) => setSetting(db, 'cropToCard', v)}
+            onChange={(v) => {
+              setSetting(db, 'cropToCard', v).catch(() => {});
+            }}
           />
           <Row icon={FolderCog} title="Categories" onPress={() => router.push('/categories')} right={chevron} />
         </Group>
@@ -185,7 +197,7 @@ export default function SettingsScreen() {
             icon={sec === s.lockAfterSeconds ? Check : Timer}
             label={lockAfterLabel(sec)}
             onPress={() => {
-              setSetting(db, 'lockAfterSeconds', sec);
+              setSetting(db, 'lockAfterSeconds', sec).catch(() => {});
               setPicker(null);
             }}
           />
@@ -198,7 +210,7 @@ export default function SettingsScreen() {
             icon={m === s.sortMode ? Check : ArrowDownUp}
             label={SORT_LABELS[m]}
             onPress={() => {
-              setSetting(db, 'sortMode', m);
+              setSetting(db, 'sortMode', m).catch(() => {});
               setPicker(null);
             }}
           />

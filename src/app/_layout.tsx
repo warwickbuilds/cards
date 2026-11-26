@@ -2,7 +2,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -48,6 +48,9 @@ function OpenError({ error }: { error: Error }) {
 function Shell() {
   const { colors, isDark } = useTheme();
   const { locked } = useSecurity();
+  // Defer mounting screens (and reading card thumbnails into memory) until the first unlock.
+  const [unlockedOnce, setUnlockedOnce] = useState(!locked);
+  if (!locked && !unlockedOnce) setUnlockedOnce(true);
 
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(colors.bg).catch(() => {});
@@ -61,20 +64,24 @@ function Shell() {
   return (
     <>
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: colors.bg },
-          animation: 'slide_from_right',
-        }}
-      >
-        <Stack.Screen name="index" />
-        <Stack.Screen name="card/[id]" options={{ animation: 'fade', contentStyle: { backgroundColor: '#000' } }} />
-        <Stack.Screen name="edit" options={{ animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="categories" />
-        <Stack.Screen name="settings" />
-        <Stack.Screen name="backup" />
-      </Stack>
+      {unlockedOnce ? (
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.bg },
+            animation: 'slide_from_right',
+          }}
+        >
+          <Stack.Screen name="index" />
+          <Stack.Screen name="card/[id]" options={{ animation: 'fade', contentStyle: { backgroundColor: '#000' } }} />
+          <Stack.Screen name="edit" options={{ animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="categories" />
+          <Stack.Screen name="settings" />
+          <Stack.Screen name="backup" />
+        </Stack>
+      ) : (
+        <View style={{ flex: 1, backgroundColor: colors.bg }} />
+      )}
       {locked ? <LockScreen /> : null}
     </>
   );

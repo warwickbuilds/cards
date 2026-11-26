@@ -82,6 +82,9 @@ describe('encrypted backup file', () => {
     const weak = file.slice();
     new DataView(weak.buffer).setUint32(10, 1000, false);
     expect(() => readHeader(weak)).toThrow(BackupCryptoError);
+    const zeroVer = file.slice();
+    zeroVer[8] = 0;
+    expect(() => readHeader(zeroVer)).toThrow('damaged');
     const newer = file.slice();
     newer[8] = 99;
     expect(() => readHeader(newer)).toThrow('newer version');
@@ -106,11 +109,15 @@ describe('parsePayload', () => {
   it('rejects other apps and newer formats', () => {
     expect(() => parsePayload(json((p) => (p.app = 'other')))).toThrow('isn’t a Cards backup');
     expect(() => parsePayload(json((p) => (p.format = 99)))).toThrow('newer version');
+    expect(() => parsePayload(json((p) => (p.format = 0)))).toThrow('damaged');
+    expect(() => parsePayload(json((p) => (p.format = 1.5)))).toThrow('damaged');
     expect(() => parsePayload('not json')).toThrow('damaged');
   });
-  it('rejects bad ids, images and duplicates', () => {
+  it('rejects bad ids, images, dimensions and duplicates', () => {
     expect(() => parsePayload(json((p) => (p.cards[0].id = '../etc')))).toThrow('damaged');
     expect(() => parsePayload(json((p) => (p.images[0].full = 'PHN2Zz4=')))).toThrow('damaged'); // not a JPEG
+    expect(() => parsePayload(json((p) => (p.images[0].width = 0)))).toThrow('damaged');
+    expect(() => parsePayload(json((p) => (p.images[0].height = -4)))).toThrow('damaged');
     expect(() => parsePayload(json((p) => (p.images[0].cardId = 'missing')))).toThrow('damaged');
     expect(() => parsePayload(json((p) => p.images.push(p.images[0])))).toThrow('damaged');
     expect(() => parsePayload(json((p) => p.cards.push(p.cards[0])))).toThrow('damaged');

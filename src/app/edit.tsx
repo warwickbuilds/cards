@@ -3,7 +3,7 @@
 import { router, useLocalSearchParams, usePreventRemove } from 'expo-router';
 import { Camera, Images, RotateCw, Trash2, X } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CategorySheet } from '@/components/CategorySheet';
@@ -58,7 +58,7 @@ function EditForm({ id, initial }: { id?: string; initial: FormStart }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const settings = useSettings();
-  const { expectExternal } = useSecurity();
+  const { expectExternal, clearExternal } = useSecurity();
   const { data: categories } = useCategories();
 
   const [title, setTitle] = useState(initial.title);
@@ -100,8 +100,7 @@ function EditForm({ id, initial }: { id?: string; initial: FormStart }) {
     setPhotoMenu(null);
     setBusySide(side);
     try {
-      expectExternal();
-      const img = await pickPhoto(source, settings.cropToCard);
+      const img = await pickPhoto(source, settings.cropToCard, expectExternal, clearExternal);
       if (img) setImage(side, img);
     } catch (e) {
       Alert.alert(
@@ -154,9 +153,13 @@ function EditForm({ id, initial }: { id?: string; initial: FormStart }) {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            disablePrevention();
-            await deleteCard(db, id);
-            router.dismissTo('/');
+            try {
+              disablePrevention();
+              await deleteCard(db, id);
+              router.dismissTo('/');
+            } catch {
+              Alert.alert('Couldn’t delete the card', 'Please try again.');
+            }
           },
         },
       ],
@@ -166,10 +169,7 @@ function EditForm({ id, initial }: { id?: string; initial: FormStart }) {
   const cats = sortCategories(categories);
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.bg }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <View style={[styles.topBar, { paddingTop: insets.top + space[1], borderBottomColor: colors.border }]}>
         <IconButton icon={X} label="Close" onPress={() => router.back()} />
         <T variant="headline" style={{ flex: 1 }}>
@@ -306,7 +306,7 @@ function EditForm({ id, initial }: { id?: string; initial: FormStart }) {
           setNewCategory(false);
         }}
       />
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

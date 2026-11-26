@@ -11,7 +11,7 @@ import { useKeepAwake } from 'expo-keep-awake';
 import { StatusBar } from 'expo-status-bar';
 import { ChevronLeft, Pencil, Pin, PinOff, RotateCw, Sun, SunDim } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { BackHandler, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CardArt } from '@/components/CardArt';
@@ -35,7 +35,7 @@ async function brighten() {
 }
 async function restoreBrightness() {
   try {
-    if (Platform.OS === 'android') await Brightness.restoreSystemBrightnessAsync();
+    await Brightness.restoreSystemBrightnessAsync();
   } catch {
     // Leaving the screen restores it anyway on Android.
   }
@@ -69,10 +69,20 @@ export default function CardView() {
     }, [bright]),
   );
 
+  // Back button exits immersive view before leaving the card screen.
+  useEffect(() => {
+    if (!immersive) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      setImmersive(false);
+      return true;
+    });
+    return () => sub.remove();
+  }, [immersive]);
+
   useEffect(() => {
     if (id && card && !counted.current) {
       counted.current = true;
-      markUsed(db, id);
+      markUsed(db, id).catch(() => {});
     }
   }, [db, id, card]);
 
@@ -80,8 +90,8 @@ export default function CardView() {
     if (loaded && !card) router.back();
   }, [loaded, card]);
 
-  const image = images[side] ?? (side === 'back' ? undefined : images.back);
-  const hasBack = !!images.back;
+  const hasBoth = !!images.front && !!images.back;
+  const image = images[side] ?? images.front ?? images.back;
   const category = card?.categoryId ? categories.find((c) => c.id === card.categoryId) : undefined;
   const uri = jpegUri(image?.full);
 
@@ -125,7 +135,7 @@ export default function CardView() {
         <StatusBar hidden />
         {cardView}
         <View style={[styles.immersiveBar, { bottom: insets.bottom + space[4] }]}>
-          {hasBack ? <SideSwitch side={side} onChange={setSide} /> : null}
+          {hasBoth ? <SideSwitch side={side} onChange={setSide} /> : <View />}
           <IconButton icon={RotateCw} label="Rotate" color={FG} background={PANEL} onPress={() => setRotated((r) => !r)} />
         </View>
       </View>
@@ -148,7 +158,9 @@ export default function CardView() {
           icon={card.pinned ? PinOff : Pin}
           label={card.pinned ? 'Unpin' : 'Pin to top'}
           color={FG}
-          onPress={() => setPinned(db, card.id, !card.pinned)}
+          onPress={() => {
+            setPinned(db, card.id, !card.pinned).catch(() => {});
+          }}
         />
         <IconButton
           icon={Pencil}
@@ -162,7 +174,7 @@ export default function CardView() {
         <View style={[styles.stage, { minHeight: rotated ? frameH + space[6] : undefined }]}>{cardView}</View>
 
         <View style={styles.controls}>
-          {hasBack ? <SideSwitch side={side} onChange={setSide} /> : <View />}
+          {hasBoth ? <SideSwitch side={side} onChange={setSide} /> : <View />}
           <IconButton icon={RotateCw} label="Rotate" color={FG} background={PANEL} onPress={() => setRotated((r) => !r)} />
         </View>
         <T variant="caption" color={MUTED} style={{ textAlign: 'center', marginTop: space[2] }}>

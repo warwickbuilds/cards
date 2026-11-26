@@ -50,6 +50,11 @@ const num = (v: unknown): number => {
   if (typeof v !== 'number' || !Number.isFinite(v)) throw damaged();
   return v;
 };
+const posInt = (v: unknown): number => {
+  const n = num(v);
+  if (!Number.isInteger(n) || n <= 0) throw damaged();
+  return n;
+};
 const id = (v: unknown): string => {
   const s = str(v, 64, false);
   if (!/^[A-Za-z0-9_-]+$/.test(s)) throw damaged();
@@ -76,7 +81,8 @@ export function parsePayload(json: string): BackupPayload {
     throw damaged();
   }
   if (!isObj(data) || data.app !== BACKUP_APP) throw new BackupDataError('This file isn’t a Cards backup.');
-  if (typeof data.format !== 'number' || data.format > DATA_FORMAT) {
+  if (typeof data.format !== 'number' || !Number.isInteger(data.format) || data.format < 1) throw damaged();
+  if (data.format > DATA_FORMAT) {
     throw new BackupDataError('This backup was made by a newer version of Cards. Update the app, then import it.');
   }
   if (!Array.isArray(data.categories) || !Array.isArray(data.cards) || !Array.isArray(data.images)) throw damaged();
@@ -126,8 +132,8 @@ export function parsePayload(json: string): BackupPayload {
       side: side as Side,
       full: image(im.full),
       thumb: image(im.thumb),
-      width: num(im.width),
-      height: num(im.height),
+      width: posInt(im.width),
+      height: posInt(im.height),
     };
   });
 

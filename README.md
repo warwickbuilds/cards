@@ -20,7 +20,7 @@
 <p align="center">
   <a href="https://github.com/warwickbuilds/cards/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/warwickbuilds/cards/ci.yml?branch=main&style=flat-square&label=CI&logo=githubactions&logoColor=white" alt="CI status" /></a>
   <a href="https://github.com/warwickbuilds/cards/actions/workflows/android-release.yml"><img src="https://img.shields.io/github/actions/workflow/status/warwickbuilds/cards/android-release.yml?style=flat-square&label=APK%20build&logo=android&logoColor=white" alt="APK build status" /></a>
-  <img src="https://img.shields.io/badge/Android-8.0%2B-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Android 8.0 and newer" />
+  <img src="https://img.shields.io/badge/Android-16%2B%20(Pixel%2010%2B)-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Android 16 and newer (Pixel 10+)" />
   <img src="https://img.shields.io/badge/Expo-SDK%2058-000020?style=flat-square&logo=expo&logoColor=white" alt="Expo SDK 58" />
   <img src="https://img.shields.io/badge/React%20Native-0.88-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React Native 0.88" />
   <img src="https://img.shields.io/badge/TypeScript-6-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
@@ -128,7 +128,7 @@ On the phone itself: **Settings → Apps → Cards → Permissions** (or **App i
 
 Cards isn't on the Play Store (that would mean a Google developer account, Play services and policies it doesn't need). You install the signed APK straight from GitHub Releases.
 
-1. On the phone, open the [latest release](https://github.com/warwickbuilds/cards/releases/latest) and download `cards-<version>-arm64.apk`. It fits almost every phone from the last several years. If Android says it can't install it (older 32-bit phones), download `cards-<version>-universal.apk` instead.
+1. On your Android 16+ phone (Pixel 10 and newer), open the [latest release](https://github.com/warwickbuilds/cards/releases/latest) and download `cards-<version>-arm64.apk`.
 2. Open the downloaded file. Android asks whether your browser (or Files app) may install unknown apps. Tap **Settings**, turn on **Allow from this source**, then go back and tap **Install**. You only need to do this once.
 3. **Play Protect** may say the app is unrecognised because it isn't from the Play Store. Tap **More details → Install anyway**.
 4. Open Cards. That's it: no sign-up screen.
@@ -153,7 +153,7 @@ Reinstalling or on a new phone? Go to **Settings → Restore**, pick your `.card
 - Your cards, photos and notes are stored in an **encrypted database**. The key is kept in Android's hardware-backed Keystore and never leaves the phone.
 - **Uninstalling the app, or clearing its storage, deletes your cards permanently.** Android's own cloud backup is switched off for this app on purpose (so your card photos never end up in a Google backup), and there's no Cards cloud to recover from. Make a backup in **Settings → Back up** and keep the file somewhere safe, ideally off the phone.
 - Backups are encrypted with a passphrase you choose. Without the passphrase nobody, including you and including us, can open one, so don't forget it.
-- **Delete everything** in Settings wipes every card, photo and category (after your fingerprint or PIN).
+- **Delete everything** in Settings wipes every card, photo and custom setting, and resets categories back to the defaults (after your fingerprint or PIN).
 - The full details are in the [Privacy policy](PRIVACY.md).
 
 ## FAQ
@@ -203,7 +203,7 @@ Everything below is about how the app is built, released and maintained.
 | UI | Custom tokens with light and dark mode, lucide icons, Reanimated and Gesture Handler for zoom and pan |
 | Phone features | expo-image-picker (camera and system photo picker), expo-image-manipulator (crop, rotate, resize), expo-brightness, expo-keep-awake |
 | Quality | Jest (jest-expo), TypeScript, ESLint, and a CI workflow on every pull request |
-| Releases | GitHub Actions builds and signs arm64 and universal APKs with Gradle and publishes them to GitHub Releases |
+| Releases | GitHub Actions builds and signs a single R8-shrunk `arm64-v8a` APK (Android 16+ / Pixel 10+) with Gradle, verifies offline permissions with `aapt2`, and publishes to GitHub Releases |
 
 Full versions are in [Main dependency versions](#main-dependency-versions).
 
@@ -224,19 +224,19 @@ Full versions are in [Main dependency versions](#main-dependency-versions).
 
 ## Status
 
-Version **0.1.1**, released 2026-11-26 ([v0.1.1](https://github.com/warwickbuilds/cards/releases/tag/v0.1.1)): fixes 0.1.0 not opening on a phone.
+Version **0.2.0** (PR #5): Android 16+ (Pixel 10+, `arm64-v8a`) cleanup, performance pass, security hardening and bug fixes.
 
 | Area | State |
 | --- | --- |
-| Cards: add, edit, delete, front and back photos, notes, pin | Done (PR #1) |
-| Categories: add, rename, colour, reorder, switch on/off, delete | Done (PR #1) |
-| Home: grouped by category, pinned first, search, category chips, sort | Done (PR #1) |
-| Full-screen viewer: full brightness, keep awake, zoom, rotate, immersive | Done (PR #1) |
-| Security: encrypted database, app lock, screenshot blocking, no network | Done (PR #1, #2) |
-| Encrypted backup and restore (merge or replace) | Done (PR #1) |
-| Signed APKs on GitHub Releases | Done (v0.1.0, v0.1.1) |
+| Cards: add, edit, delete, front and back photos, notes, pin | Done (PR #1, #5) |
+| Categories: add, rename, colour, reorder, switch on/off, delete | Done (PR #1, #5) |
+| Home: grouped by category, pinned first, search, category chips, sort | Done (PR #1, #5) |
+| Full-screen viewer: full brightness, keep awake, zoom, rotate, immersive | Done (PR #1, #5) |
+| Security: encrypted database, app lock, screenshot blocking, no network | Done (PR #1, #2, #5) |
+| Encrypted backup and restore (merge or replace) | Done (PR #1, #5) |
+| Signed APKs on GitHub Releases | Done (v0.1.0, v0.1.1; single `arm64-v8a` APK from v0.2.0) |
 | Open source polish: privacy-first README, banner and badges, privacy policy, security policy, contributing guide, code of conduct, issue templates | Done (PR #3) |
-| Tested on a real phone | 0.1.0 failed on first launch (fixed in 0.1.1); 0.1.1 not yet confirmed on a phone |
+| Tested on a real phone | 0.1.0 failed on first launch (fixed in 0.1.1); 0.2.0 ready for Pixel 10 testing |
 | Screenshots in the README | Planned (needs demo cards, never real ones) |
 
 ## Features
@@ -291,6 +291,7 @@ The detailed list of what works now.
 
 | Version | Date | PR | Changes |
 | --- | --- | --- | --- |
+| 0.2.0 | 2026-11-26 | #5 | Pixel 10+ / Android 16 (API 36) `arm64-v8a`-only build with R8 minification, resource shrinking, direct uncompressed native libs (`useLegacyPackaging: false`), and dropped iOS/web config and unused native deps (`@expo/vector-icons`, `expo-document-picker`, `expo-sharing`, `react-dom`, `react-native-web`). Security hardening: hide `<Modal>` sheets when locked, defer mounting navigation/card data until initial unlock, bound `expectExternal` grace window (5 min) and clear after permission denial, clear restore passphrase after decrypt, guard DB key overwrite on existing file, tighten backup version/format/dimension checks, and assert no `INTERNET` permission + SQLCipher in CI. Performance & bug fixes: scoped store invalidation, single resolved thumbnail query (fixes back-only cards), rotated zoom pan bounds, stale category filter recovery, single-decode photo prep with native ref release, zero-fade card rendering, hardware back exit from immersive mode, `NULL`-preserving restore merge, starter-category re-seed on Delete everything, keyboard-aware sheets, and real SQLite repo tests. |
 | 0.1.1 (dev) | 2026-11-26 | #4 | Dev environment only, no app change: add `.agents/environment.json` so cloud dev environments automatically install locked dependencies with `npm ci`. |
 | 0.1.1 (docs) | 2026-11-26 | #3 | Docs and repo only, no app change: privacy-first README with banner, badges, highlights, a privacy comparison and FAQ, user guide first and developer details below; new PRIVACY.md, CODE_OF_CONDUCT.md and CONTRIBUTING.md; fuller SECURITY.md with the release certificate; bug and feature issue forms. |
 | 0.1.1 | 2026-11-26 | #2 | Fix: 0.1.0 stopped on launch with "file is not a database". Writes ran on a second database connection that never got the encryption key. All writes now run, one at a time, on the one encrypted connection (`src/db/transaction.ts`). An install of 0.1.0 opens fine after updating, no reinstall needed. |
@@ -300,31 +301,31 @@ The detailed list of what works now.
 
 | Package | Version |
 | --- | --- |
-| Expo SDK | 58.0.26 |
+| Expo SDK | 58.1.0 |
 | React Native | 0.88.1 |
 | React | 19.3.0 |
-| expo-router | 58.0.32 |
+| expo-router | 58.0.33 |
 | expo-sqlite (with SQLCipher) | 58.0.18 |
 | expo-secure-store | 58.0.3 |
-| expo-crypto (AES-GCM) | 58.0.8 |
+| expo-crypto (AES-GCM) | 58.0.9 |
 | expo-local-authentication | 58.0.3 |
 | expo-screen-capture | 58.0.6 |
 | expo-brightness | 58.0.3 |
-| expo-image / image-picker / image-manipulator | 58.0.18 / 58.0.10 / 58.0.16 |
+| expo-image / image-picker / image-manipulator | 58.0.19 / 58.0.10 / 58.0.16 |
 | react-native-gesture-handler | 3.3.0 |
 | react-native-reanimated | 4.7.1 |
 | @noble/hashes (PBKDF2) | 2.4.0 |
 | lucide-react-native | 1.80.0 |
 | TypeScript | 6.0.3 |
 
-Android 8.0 (API 26) and newer.
+Android 16 (API 36) and newer (`arm64-v8a`, Pixel 10 and above).
 
 ## Architecture
 
 ```
-Screens (src/app, Expo Router stack)
+Screens (src/app, Expo Router stack — deferred on launch until initial unlock)
    │  read through live hooks (src/db/DataProvider.tsx: useWallet, useCard, useSettings…)
-   │  write through small functions (src/db/repo.ts), which bump a change counter (src/db/store.ts)
+   │  write through small functions (src/db/repo.ts), which bump scoped counters (src/db/store.ts)
    │  every write is queued and wrapped in a transaction on the one keyed connection (src/db/transaction.ts)
    ▼
 SQLite + SQLCipher on the phone (src/db/database.ts, schema and migrations in src/db/schema.ts)
@@ -364,11 +365,11 @@ Migrations: append to `MIGRATIONS` in `src/db/schema.ts`; never edit a shipped o
 ```
 src/app/         screens (Expo Router)
 src/components/  UI pieces: CardTile, CardArt, ZoomableImage, PhotoSlot, CategorySheet, LockScreen, ui.tsx
-src/db/          database, schema, repo (reads/writes), DataProvider hooks, change store
+src/db/          database, schema, repo (reads/writes), DataProvider hooks, scoped change store
 src/lib/         pure logic + photo, backup IO and AES helpers
 src/security/    app lock and screenshot blocking
 src/theme/       colours, tokens, light/dark
-plugins/         config plugins: release signing, ABI splits, version code
+plugins/         config plugins: release signing, version code
 docs/DESIGN.md   UX research and design decisions
 docs/banner.svg  README banner (follows light and dark mode)
 .agents/         cloud development environment setup (environment.json)
@@ -380,13 +381,13 @@ PRIVACY.md, SECURITY.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md   project policies
 
 | Threat | Protection |
 | --- | --- |
-| Data leaving the phone | No `INTERNET` permission in release builds (removed in `app.config.js`), so the OS blocks all network access. No analytics or crash reporting libraries. |
-| Someone with the unlocked phone | App lock with Android's biometric prompt or screen lock (`expo-local-authentication`), on launch and after the chosen time in the background. |
+| Data leaving the phone | No `INTERNET` permission in release builds (removed in `app.config.js` and enforced in CI via `aapt2 dump permissions`), so the OS blocks all network access. No analytics or crash reporting libraries. |
+| Someone with the unlocked phone | App lock with Android's biometric prompt or screen lock (`expo-local-authentication`), on launch and after the chosen time in the background. Screens aren't mounted before initial unlock, bottom-sheet modals hide automatically while locked, and external camera/picker flows use a bounded 5-minute grace window. |
 | Shoulder-surfing / screenshots / recent apps | `FLAG_SECURE` (`expo-screen-capture`) blocks screenshots and screen recording and blanks the app in the app switcher. |
 | Phone storage read off the device | Database encrypted with SQLCipher (AES-256). Key is 32 random bytes in `expo-secure-store`, encrypted by the hardware-backed Android Keystore. `secure_delete` overwrites deleted rows. |
 | Leftover photo files | Camera, crop and resize outputs are deleted immediately after reading; the cache folders are swept on launch. `expo-image` is told not to cache card photos on disk. |
 | Cloud/adb backups | `allowBackup: false`, so Android never copies the database (or its key) into Google backups. |
-| Backup files | `.cardsbackup`: PBKDF2-HMAC-SHA256 (150,000 iterations, random salt) → AES-256-GCM with the header as authenticated data. Wrong passphrase or any tampering fails cleanly. Restored data is validated (ids, sizes, JPEG signatures, references) before anything is changed, and applied in one transaction. |
+| Backup files | `.cardsbackup`: PBKDF2-HMAC-SHA256 (150,000 iterations, random salt) → AES-256-GCM with the header as authenticated data. Wrong passphrase or any tampering fails cleanly. Restored data is validated (ids, sizes, positive dimensions, JPEG signatures, references) before anything is changed, and applied in one transaction. |
 | Over-broad permissions | Only camera and biometric permissions. Microphone, storage, media, overlay, settings and network-state permissions are explicitly blocked. The gallery uses Android's photo picker (no storage permission). |
 
 Release APKs are signed with one key; its certificate SHA-256 is `5d88d9a692842701578e71c4456eaceaabe5a46639dad2f508359d122c0bad5e` (see [SECURITY.md](SECURITY.md#checking-a-download)).
@@ -412,7 +413,7 @@ npm run android     # development build on a connected phone/emulator (sets CARD
 
 ## Releases
 
-APKs are built and signed by GitHub Actions (`.github/workflows/android-release.yml`) with `expo prebuild` + Gradle, the same way as calories-and-steps: an `arm64` APK and a `universal` APK per release.
+Release APKs are built and signed by GitHub Actions (`.github/workflows/android-release.yml`) with `expo prebuild` + Gradle: a single R8-shrunk `arm64-v8a` APK targeting Android 16+ (API 36, Pixel 10 and newer).
 
 ### One-time setup: the release key
 
@@ -433,13 +434,13 @@ Android only installs an update signed with the same key as the installed app, s
 ### Making a release
 
 1. In a PR, bump `version` in `app.json` and `package.json` and add a changelog row.
-2. After it merges, on GitHub open **Releases → Draft a new release**, create tag `v<version>` on `main` and publish. The workflow builds, signs and attaches both APKs (about 15 to 25 minutes).
+2. After it merges, on GitHub open **Releases → Draft a new release**, create tag `v<version>` on `main` and publish. The workflow builds, verifies permissions and signature, and attaches `cards-<version>-arm64.apk`.
 
-Pull requests that touch the build set-up also build both APKs (debug-signed if no key is set up) and keep them as an artifact for 7 days.
+Pull requests that touch the build set-up also build the `arm64-v8a` APK (debug-signed if no key is set up) and keep it as an artifact for 7 days.
 
 ## Maintenance
 
-- **Upgrading Expo**: follow `AGENTS.md` (read the versioned docs, use `npx expo install --fix`). Check the SQLCipher flag still lands in `android/gradle.properties` (`expo.sqlite.useSQLCipher=true`) and that `INTERNET` is still removed from the merged manifest after `npx expo prebuild -p android`.
+- **Upgrading Expo**: follow `AGENTS.md` (read the versioned docs, use `npx expo install --fix` and `npx expo-doctor`). The release workflow automatically checks that `expo.sqlite.useSQLCipher=true`, `reactNativeArchitectures=arm64-v8a`, and `android.minSdkVersion=36` land in `android/gradle.properties`, and that `INTERNET` is absent from the built APK (`aapt2 dump permissions`).
 - **Transactions**: use `inTransaction` from `src/db/transaction.ts`. Never use expo-sqlite's `withExclusiveTransactionAsync` or `useNewConnection`: they open a second connection without the SQLCipher key and every write fails with "file is not a database". A test fails if either appears in `src`.
 - **Database changes**: append a migration; add any new table to `exportAll`/`importAll` in `src/db/repo.ts` and to `parsePayload` in `src/lib/backupData.ts`; bump `DATA_FORMAT` if old apps can't read the new backups.
 - **Backup file format** changes: bump `FILE_VERSION` in `src/lib/backupCrypto.ts` and keep reading the old one.

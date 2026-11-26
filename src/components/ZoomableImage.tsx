@@ -18,6 +18,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 import { scheduleOnRN } from 'react-native-worklets';
 
 const MAX_SCALE = 5;
+const SNAP = { duration: 180 };
 
 export function ZoomableImage({
   uri,
@@ -43,18 +44,23 @@ export function ZoomableImage({
   const savedTy = useSharedValue(0);
 
   useEffect(() => {
-    scale.set(withTiming(1));
+    scale.set(withTiming(1, SNAP));
     savedScale.set(1);
-    tx.set(withTiming(0));
-    ty.set(withTiming(0));
+    tx.set(withTiming(0, SNAP));
+    ty.set(withTiming(0, SNAP));
     savedTx.set(0);
     savedTy.set(0);
   }, [resetKey, scale, savedScale, tx, ty, savedTx, savedTy]);
 
+  // translateX/translateY act in screen space (before rotate), so swap bounds when rotated 90°/270°.
+  const rotatedQuarter = Math.abs(rotation) % 180 !== 0;
+  const boundW = rotatedQuarter ? height : width;
+  const boundH = rotatedQuarter ? width : height;
+
   const clampPan = (s: number) => {
     'worklet';
-    const maxX = ((s - 1) * width) / 2;
-    const maxY = ((s - 1) * height) / 2;
+    const maxX = ((s - 1) * boundW) / 2;
+    const maxY = ((s - 1) * boundH) / 2;
     tx.set(Math.min(maxX, Math.max(-maxX, tx.get())));
     ty.set(Math.min(maxY, Math.max(-maxY, ty.get())));
   };
@@ -67,7 +73,7 @@ export function ZoomableImage({
     onDeactivate: () => {
       'worklet';
       const s = Math.min(MAX_SCALE, Math.max(1, scale.get()));
-      scale.set(withTiming(s));
+      scale.set(withTiming(s, SNAP));
       savedScale.set(s);
       clampPan(s);
       savedTx.set(tx.get());
@@ -87,8 +93,8 @@ export function ZoomableImage({
     onDeactivate: () => {
       'worklet';
       clampPan(savedScale.get());
-      tx.set(withTiming(tx.get()));
-      ty.set(withTiming(ty.get()));
+      tx.set(withTiming(tx.get(), SNAP));
+      ty.set(withTiming(ty.get(), SNAP));
       savedTx.set(tx.get());
       savedTy.set(ty.get());
     },
@@ -99,10 +105,10 @@ export function ZoomableImage({
     onActivate: () => {
       'worklet';
       const next = savedScale.get() > 1 ? 1 : 2.5;
-      scale.set(withTiming(next));
+      scale.set(withTiming(next, SNAP));
       savedScale.set(next);
-      tx.set(withTiming(0));
-      ty.set(withTiming(0));
+      tx.set(withTiming(0, SNAP));
+      ty.set(withTiming(0, SNAP));
       savedTx.set(0);
       savedTy.set(0);
     },
@@ -131,6 +137,7 @@ export function ZoomableImage({
           style={StyleSheet.absoluteFill}
           contentFit="contain"
           cachePolicy="memory"
+          transition={0}
           accessibilityIgnoresInvertColors
         />
       </Animated.View>

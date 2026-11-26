@@ -38,7 +38,7 @@ If you put a backup file in a cloud folder yourself, that service's own privacy 
 
 ## Deleting your data
 
-- **Delete everything** in Settings wipes every card, photo, category and setting.
+- **Delete everything** in Settings wipes every card, photo and custom setting, and resets categories back to the defaults.
 - Uninstalling the app, or clearing its storage in Android settings, deletes everything too.
 - Backup files you made are yours; delete them like any other file.
 

@@ -41,7 +41,7 @@ export function PhotoSlot({
         ]}
       >
         {uri ? (
-          <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory" />
+          <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory" transition={0} />
         ) : (
           <View style={styles.empty}>
             {label === 'Front' ? <Camera size={26} color={colors.accent} /> : <ImagePlus size={26} color={colors.textMuted} />}

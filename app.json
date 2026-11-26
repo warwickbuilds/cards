@@ -2,15 +2,12 @@
   "expo": {
     "name": "Cards",
     "slug": "cards",
-    "version": "0.1.1",
+    "version": "0.2.0",
+    "platforms": ["android"],
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "cards",
     "userInterfaceStyle": "automatic",
-    "ios": {
-      "bundleIdentifier": "com.warwickbuilds.cards",
-      "supportsTablet": false
-    },
     "android": {
       "package": "com.warwickbuilds.cards",
       "allowBackup": false,
@@ -35,17 +32,12 @@
         "android.permission.ACCESS_WIFI_STATE"
       ]
     },
-    "web": {
-      "favicon": "./assets/images/favicon.png"
-    },
     "plugins": [
       "expo-router",
+      "expo-image",
       ["expo-sqlite", { "useSQLCipher": true }],
       "expo-secure-store",
-      [
-        "expo-local-authentication",
-        { "faceIDPermission": "Cards uses Face ID to unlock your cards." }
-      ],
+      "expo-local-authentication",
       [
         "expo-image-picker",
         {
@@ -56,7 +48,19 @@
       ],
       [
         "expo-build-properties",
-        { "android": { "minSdkVersion": 26, "useLegacyPackaging": true } }
+        {
+          "android": {
+            "minSdkVersion": 36,
+            "buildArchs": ["arm64-v8a"],
+            "useLegacyPackaging": false,
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "networkInspector": false,
+            "usesCleartextTraffic": false,
+            "gifEnabled": false,
+            "webpEnabled": false
+          }
+        }
       ],
       [
         "expo-splash-screen",

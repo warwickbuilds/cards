@@ -21,8 +21,7 @@ const card = (title: string, categoryId: string | null, extra: Partial<CardSumma
   lastUsedAt: null,
   createdAt: n,
   updatedAt: n,
-  frontThumb: null,
-  backThumb: null,
+  thumb: null,
   ...extra,
 });
 

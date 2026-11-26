@@ -32,7 +32,12 @@ function safeDelete(uri: string | null | undefined) {
 
 export class PermissionDeniedError extends Error {}
 
-export async function pickPhoto(source: PhotoSource, cropToCard: boolean): Promise<PreparedImage | null> {
+export async function pickPhoto(
+  source: PhotoSource,
+  cropToCard: boolean,
+  onBeforePicker?: () => void,
+  onAfterPicker?: () => void,
+): Promise<PreparedImage | null> {
   const options: ImagePicker.ImagePickerOptions = {
     mediaTypes: ['images'],
     allowsEditing: true,
@@ -47,9 +52,19 @@ export async function pickPhoto(source: PhotoSource, cropToCard: boolean): Promi
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted)
       throw new PermissionDeniedError('Camera access is off for Cards. Turn it on in Android settings to take photos.');
-    result = await ImagePicker.launchCameraAsync(options);
+    onBeforePicker?.();
+    try {
+      result = await ImagePicker.launchCameraAsync(options);
+    } finally {
+      onAfterPicker?.();
+    }
   } else {
-    result = await ImagePicker.launchImageLibraryAsync(options);
+    onBeforePicker?.();
+    try {
+      result = await ImagePicker.launchImageLibraryAsync(options);
+    } finally {
+      onAfterPicker?.();
+    }
   }
   if (result.canceled || !result.assets?.[0]) return null;
   const asset = result.assets[0];
@@ -64,30 +79,45 @@ export async function pickPhoto(source: PhotoSource, cropToCard: boolean): Promi
 
 async function render(uri: string, width: number, height: number, edge: number, compress: number) {
   const ctx = ImageManipulator.manipulate(uri);
-  if (Math.max(width, height) > edge) {
-    ctx.resize(width >= height ? { width: edge, height: null } : { width: null, height: edge });
+  let ref: Awaited<ReturnType<typeof ctx.renderAsync>> | null = null;
+  try {
+    if (Math.max(width, height) > edge) {
+      ctx.resize(width >= height ? { width: edge, height: null } : { width: null, height: edge });
+    }
+    ref = await ctx.renderAsync();
+    const saved = await ref.saveAsync({ format: SaveFormat.JPEG, compress, base64: true });
+    safeDelete(saved.uri);
+    if (!saved.base64) throw new Error('Could not read the picture.');
+    return saved;
+  } finally {
+    ref?.release();
+    ctx.release();
   }
-  const ref = await ctx.renderAsync();
-  const saved = await ref.saveAsync({ format: SaveFormat.JPEG, compress, base64: true });
-  safeDelete(saved.uri);
-  if (!saved.base64) throw new Error('Could not read the picture.');
-  return saved;
 }
 
 export async function prepare(uri: string, width: number, height: number): Promise<PreparedImage> {
+  // Decode the full-resolution camera file once, then downscale the thumbnail from the resized image.
   const full = await render(uri, width, height, FULL_EDGE, 0.85);
-  const thumb = await render(uri, width, height, THUMB_EDGE, 0.7);
+  const thumb = await render(`data:image/jpeg;base64,${full.base64!}`, full.width, full.height, THUMB_EDGE, 0.7);
   return { full: full.base64!, thumb: thumb.base64!, width: full.width, height: full.height };
 }
 
 /** Turns a stored picture a quarter turn clockwise. */
 export async function rotateImage(image: PreparedImage): Promise<PreparedImage> {
   const src = `data:image/jpeg;base64,${image.full}`;
-  const ref = await ImageManipulator.manipulate(src).rotate(90).renderAsync();
-  const saved = await ref.saveAsync({ format: SaveFormat.JPEG, compress: 0.9, base64: true });
-  safeDelete(saved.uri);
-  const thumb = await render(`data:image/jpeg;base64,${saved.base64}`, saved.width, saved.height, THUMB_EDGE, 0.7);
-  return { full: saved.base64!, thumb: thumb.base64!, width: saved.width, height: saved.height };
+  const ctx = ImageManipulator.manipulate(src);
+  let ref: Awaited<ReturnType<typeof ctx.renderAsync>> | null = null;
+  try {
+    ref = await ctx.rotate(90).renderAsync();
+    const saved = await ref.saveAsync({ format: SaveFormat.JPEG, compress: 0.9, base64: true });
+    safeDelete(saved.uri);
+    if (!saved.base64) throw new Error('Could not read the picture.');
+    const thumb = await render(`data:image/jpeg;base64,${saved.base64}`, saved.width, saved.height, THUMB_EDGE, 0.7);
+    return { full: saved.base64, thumb: thumb.base64!, width: saved.width, height: saved.height };
+  } finally {
+    ref?.release();
+    ctx.release();
+  }
 }
 
 /**
