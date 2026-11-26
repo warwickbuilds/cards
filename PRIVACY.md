@@ -1,6 +1,6 @@
 # Privacy policy
 
-_Last updated: 26 November 2026. Applies to the Cards Android app, version 0.2.0 and later._
+_Last updated: 26 November 2026. Applies to the Cards Android app, version 0.3.0 and later._
 
 **The short version: Cards collects nothing. Your cards never leave your phone.**
 
@@ -8,7 +8,7 @@ _Last updated: 26 November 2026. Applies to the Cards Android app, version 0.2.0
 
 Nothing. Cards has no developer server, no accounts, no analytics, no telemetry, no crash reporting, no advertising and no third-party SDKs that send data. The developer never receives, sees or stores any of your information, so there is nothing to sell, share, hand over or lose in a breach.
 
-Starting in version 0.2.0, the **only** network request Cards can make is an explicit, manual **Check for updates** in Settings, which sends a single unauthenticated `GET` request to GitHub's public latest-release endpoint (`api.github.com/repos/warwickbuilds/cards/releases/latest`). Cards never checks the network automatically or in the background, and never sends any card data, account, token, or device identifier.
+Starting in version 0.3.0, the **only** network request Cards can make is an explicit, manual **Check for updates** in Settings, which sends a single unauthenticated `GET` request to GitHub's public latest-release endpoint (`api.github.com/repos/warwickbuilds/cards/releases/latest`). Cards never checks the network automatically or in the background, and never sends any card data, account, token, or device identifier.
 
 ## What stays on your phone
 
@@ -51,7 +51,7 @@ Cards collects no data from anyone, including children.
 
 ## Changes
 
-- **0.2.0 (26 November 2026):** Added `INTERNET` permission solely for the manual **Settings → Check for updates** button (queries GitHub's public releases API when tapped; no background checks, no card data sent). Earlier versions (0.1.0–0.1.1) had no `INTERNET` permission.
+- **0.3.0 (26 November 2026):** Added `INTERNET` permission solely for the manual **Settings → Check for updates** button (queries GitHub's public releases API when tapped; no background checks, no card data sent). Earlier versions (0.1.0–0.2.0) had no `INTERNET` permission.
 
 If this policy ever changes, the new version will be in this file, with the change listed in the README changelog. Any change that let user data leave the phone would be a fundamental change to what Cards is, and would be stated clearly in the release notes.
 

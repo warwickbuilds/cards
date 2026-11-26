@@ -224,7 +224,7 @@ Full versions are in [Main dependency versions](#main-dependency-versions).
 
 ## Status
 
-Version **0.2.0** (PR #5): Android 16+ (Pixel 10+, `arm64-v8a`) cleanup, manual Settings update checker, performance pass, security hardening and bug fixes.
+Version **0.3.0** (PR #6): adds manual-only GitHub Releases update checker and an **About** section with app details and GitHub links in Settings.
 
 | Area | State |
 | --- | --- |
@@ -232,13 +232,13 @@ Version **0.2.0** (PR #5): Android 16+ (Pixel 10+, `arm64-v8a`) cleanup, manual 
 | Categories: add, rename, colour, reorder, switch on/off, delete | Done (PR #1, #5) |
 | Home: grouped by category, pinned first, search, category chips, sort | Done (PR #1, #5) |
 | Full-screen viewer: full brightness, keep awake, zoom, rotate, immersive | Done (PR #1, #5) |
-| Security: encrypted database, app lock, screenshot blocking, minimal permissions | Done (PR #1, #2, #5) |
+| Security: encrypted database, app lock, screenshot blocking, minimal permissions | Done (PR #1, #2, #5, #6) |
 | Encrypted backup and restore (merge or replace) | Done (PR #1, #5) |
-| Manual update checker & direct APK download link in Settings | Done (PR #5) |
-| Signed APKs on GitHub Releases | Done (v0.1.0, v0.1.1; single `arm64-v8a` APK from v0.2.0) |
+| Manual update checker, direct APK download link & About/GitHub links in Settings | Done (PR #6) |
+| Signed APKs on GitHub Releases | Done (v0.1.0, v0.1.1, v0.2.0, v0.3.0; single `arm64-v8a` APK from v0.2.0) |
 | Open source polish: privacy-first README, banner and badges, privacy policy, security policy, contributing guide, code of conduct, issue templates | Done (PR #3) |
 | Cloud dev environment setup (`.agents/environment.json`) | Done (PR #4) |
-| Tested on a real phone | 0.1.0 failed on first launch (fixed in 0.1.1); 0.2.0 ready for Pixel 10 testing |
+| Tested on a real phone | 0.1.0 failed on first launch (fixed in 0.1.1); 0.3.0 ready for Pixel 10 testing |
 | Screenshots in the README | Planned (needs demo cards, never real ones) |
 
 ## Features
@@ -295,7 +295,8 @@ The detailed list of what works now.
 
 | Version | Date | PR | Changes |
 | --- | --- | --- | --- |
-| 0.2.0 | 2026-11-26 | #5 | Pixel 10+ / Android 16 (API 36) `arm64-v8a`-only build with R8 minification, resource shrinking, direct uncompressed native libs (`useLegacyPackaging: false`), and dropped iOS/web config and unused native deps (`@expo/vector-icons`, `expo-document-picker`, `expo-sharing`, `react-dom`, `react-native-web`). Added manual-only **Settings → Updates** checker against GitHub Releases with trusted-URL direct `arm64` APK download & release notes links (`src/lib/version.ts`, `src/lib/updates.ts`; no background checks, enforced by static `fetch` guard test), plus a **Settings → About** section with app details and links to the GitHub repo, Releases, Privacy policy and Issues. Security hardening: hide `<Modal>` sheets when locked, defer mounting navigation/card data until initial unlock, bound `expectExternal` grace window (5 min) and clear after permission denial, clear restore passphrase after decrypt, guard DB key overwrite on existing file, tighten backup version/format/dimension checks, and verify minimal permissions + SQLCipher in CI. Performance & bug fixes: scoped store invalidation, single resolved thumbnail query (fixes back-only cards), rotated zoom pan bounds, stale category filter recovery, single-decode photo prep with native ref release, zero-fade card rendering, hardware back exit from immersive mode, `NULL`-preserving restore merge, starter-category re-seed on Delete everything, keyboard-aware sheets, and real SQLite repo tests. |
+| 0.3.0 | 2026-11-26 | #6 | Added manual-only **Settings → Updates** checker against GitHub Releases with trusted-URL direct `arm64` APK download & release notes links (`src/lib/version.ts`, `src/lib/updates.ts`; no background checks, enforced by static `fetch` guard test), plus a **Settings → About** section with app details and links to the GitHub repo, Releases, Privacy policy and Issues. Enables `INTERNET` solely for manual update checks while keeping all blocked permissions verified in CI (`aapt2`), and updates README, PRIVACY, SECURITY, CLAUDE and CONTRIBUTING docs. |
+| 0.2.0 | 2026-11-26 | #5 | Pixel 10+ / Android 16 (API 36) `arm64-v8a`-only build with R8 minification, resource shrinking, direct uncompressed native libs (`useLegacyPackaging: false`), and dropped iOS/web config and unused native deps (`@expo/vector-icons`, `expo-document-picker`, `expo-sharing`, `react-dom`, `react-native-web`). Security hardening: hide `<Modal>` sheets when locked, defer mounting navigation/card data until initial unlock, bound `expectExternal` grace window (5 min) and clear after permission denial, clear restore passphrase after decrypt, guard DB key overwrite on existing file, tighten backup version/format/dimension checks, and verify SQLCipher + permissions in CI. Performance & bug fixes: scoped store invalidation, single resolved thumbnail query (fixes back-only cards), rotated zoom pan bounds, stale category filter recovery, single-decode photo prep with native ref release, zero-fade card rendering, hardware back exit from immersive mode, `NULL`-preserving restore merge, starter-category re-seed on Delete everything, keyboard-aware sheets, and real SQLite repo tests. |
 | 0.1.1 (dev) | 2026-11-26 | #4 | Dev environment only, no app change: add `.agents/environment.json` so cloud dev environments automatically install locked dependencies with `npm ci`. |
 | 0.1.1 (docs) | 2026-11-26 | #3 | Docs and repo only, no app change: privacy-first README with banner, badges, highlights, a privacy comparison and FAQ, user guide first and developer details below; new PRIVACY.md, CODE_OF_CONDUCT.md and CONTRIBUTING.md; fuller SECURITY.md with the release certificate; bug and feature issue forms. |
 | 0.1.1 | 2026-11-26 | #2 | Fix: 0.1.0 stopped on launch with "file is not a database". Writes ran on a second database connection that never got the encryption key. All writes now run, one at a time, on the one encrypted connection (`src/db/transaction.ts`). An install of 0.1.0 opens fine after updating, no reinstall needed. |
