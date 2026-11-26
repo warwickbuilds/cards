@@ -3,7 +3,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { CheckCircle2, ChevronLeft, FileLock2, FolderOpen, ShieldCheck } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Field, IconButton, T } from '@/components/ui';
@@ -23,6 +23,11 @@ function message(e: unknown): string {
   return 'Something went wrong. Please try again.';
 }
 
+function formatSavedDate(exportedAt: string): string {
+  const ts = Date.parse(exportedAt);
+  return Number.isFinite(ts) ? `, saved ${new Date(ts).toLocaleDateString()}` : '';
+}
+
 export default function Backup() {
   const { mode } = useLocalSearchParams<{ mode?: string }>();
   const { colors } = useTheme();
@@ -30,10 +35,7 @@ export default function Backup() {
   const isExport = mode !== 'import';
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.bg }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <View style={[styles.topBar, { paddingTop: insets.top + space[1] }]}>
         <IconButton icon={ChevronLeft} label="Back" size={26} onPress={() => router.back()} />
         <T variant="headline">{isExport ? 'Back up' : 'Restore'}</T>
@@ -44,7 +46,7 @@ export default function Backup() {
       >
         {isExport ? <ExportFlow /> : <ImportFlow />}
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -70,7 +72,7 @@ function Strength({ value }: { value: string }) {
 function ExportFlow() {
   const { colors } = useTheme();
   const db = useDb();
-  const { expectExternal } = useSecurity();
+  const { expectExternal, clearExternal } = useSecurity();
   const [pass, setPass] = useState('');
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
@@ -83,7 +85,7 @@ function ExportFlow() {
   const run = async () => {
     setBusy(true);
     try {
-      const res = await exportBackup(db, pass, expectExternal);
+      const res = await exportBackup(db, pass, expectExternal, clearExternal);
       if (res) {
         setDone(
           `Saved ${res.fileName} with ${plural(res.cards, 'card')} and ${plural(res.categories, 'category', 'categories')}.`,
@@ -158,7 +160,7 @@ function ExportFlow() {
 function ImportFlow() {
   const { colors } = useTheme();
   const db = useDb();
-  const { expectExternal } = useSecurity();
+  const { expectExternal, clearExternal } = useSecurity();
   const [file, setFile] = useState<PickedBackup | null>(null);
   const [pass, setPass] = useState('');
   const [payload, setPayload] = useState<BackupPayload | null>(null);
@@ -167,7 +169,7 @@ function ImportFlow() {
 
   const choose = async () => {
     try {
-      const picked = await pickBackupFile(expectExternal);
+      const picked = await pickBackupFile(expectExternal, clearExternal);
       if (picked) {
         setFile(picked);
         setPayload(null);
@@ -182,7 +184,9 @@ function ImportFlow() {
     if (!file) return;
     setBusy(true);
     try {
-      setPayload(await openBackup(file.bytes, pass));
+      const opened = await openBackup(file.bytes, pass);
+      setPass('');
+      setPayload(opened);
     } catch (e) {
       Alert.alert('Can’t open the backup', message(e));
     } finally {
@@ -267,7 +271,7 @@ function ImportFlow() {
             <ShieldCheck size={22} color={colors.accent} />
             <T variant="label" style={{ flex: 1 }}>
               {plural(payload.cards.length, 'card')}, {plural(payload.categories.length, 'category', 'categories')}
-              {payload.exportedAt ? `, saved ${new Date(payload.exportedAt).toLocaleDateString()}` : ''}.
+              {formatSavedDate(payload.exportedAt)}.
             </T>
           </View>
           <Button label="Add to my cards" busy={busy} onPress={() => apply('merge')} />

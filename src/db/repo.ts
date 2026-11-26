@@ -1,7 +1,8 @@
 /**
- * Reads and writes. Every write calls changed() so screens re-read.
- * Pictures are stored inside the encrypted database (not as loose files),
- * so they share its encryption and a card is always saved whole.
+ * Reads and writes. Every write calls changed() on the affected scopes so
+ * only relevant screens re-read. Pictures are stored inside the encrypted
+ * database (not as loose files), so they share its encryption and a card is
+ * always saved whole.
  */
 
 import { randomUUID } from 'expo-crypto';
@@ -17,8 +18,10 @@ import {
   type Category,
   type Settings,
   type Side,
+  type SortMode,
 } from '@/lib/types';
 
+import { seedStarterCategories } from './database';
 import { changed } from './store';
 import { exclusively, inTransaction } from './transaction';
 
@@ -49,6 +52,8 @@ interface ImageRow {
   width: number;
   height: number;
 }
+
+const VALID_SORT_MODES = new Set<SortMode>(['used', 'az', 'recent']);
 
 const toCategory = (r: CategoryRow): Category => ({
   id: r.id,
@@ -86,13 +91,15 @@ export async function listCategories(db: SQLiteDatabase): Promise<Category[]> {
 }
 
 export async function listCardSummaries(db: SQLiteDatabase): Promise<CardSummary[]> {
-  const rows = await db.getAllAsync<CardRow & { front_thumb: string | null; back_thumb: string | null }>(
+  const rows = await db.getAllAsync<CardRow & { thumb: string | null }>(
     `SELECT c.*,
-       (SELECT thumb FROM card_image WHERE card_id = c.id AND side = 'front') AS front_thumb,
-       (SELECT thumb FROM card_image WHERE card_id = c.id AND side = 'back') AS back_thumb
+       COALESCE(
+         (SELECT thumb FROM card_image WHERE card_id = c.id AND side = 'front'),
+         (SELECT thumb FROM card_image WHERE card_id = c.id AND side = 'back')
+       ) AS thumb
      FROM card c`,
   );
-  return rows.map((r) => ({ ...toCard(r), frontThumb: r.front_thumb, backThumb: r.back_thumb }));
+  return rows.map((r) => ({ ...toCard(r), thumb: r.thumb }));
 }
 
 export async function getCard(db: SQLiteDatabase, id: string): Promise<Card | null> {
@@ -114,6 +121,14 @@ export async function getSettings(db: SQLiteDatabase): Promise<Settings> {
     if (!(r.key in DEFAULT_SETTINGS)) continue;
     try {
       const v = JSON.parse(r.value);
+      if (r.key === 'sortMode') {
+        if (typeof v === 'string' && VALID_SORT_MODES.has(v as SortMode)) s.sortMode = v as SortMode;
+        continue;
+      }
+      if (r.key === 'lockAfterSeconds') {
+        if (typeof v === 'number' && Number.isFinite(v) && v >= 0) s.lockAfterSeconds = v;
+        continue;
+      }
       if (typeof v === typeof (DEFAULT_SETTINGS as unknown as Record<string, unknown>)[r.key]) {
         (s as unknown as Record<string, unknown>)[r.key] = v;
       }
@@ -134,7 +149,7 @@ export async function setSetting<K extends keyof Settings>(db: SQLiteDatabase, k
       JSON.stringify(value),
     ),
   );
-  changed();
+  changed('settings');
 }
 
 export interface CardInput {
@@ -150,6 +165,7 @@ export type ImageChanges = Partial<Record<Side, Omit<CardImage, 'cardId' | 'side
 export async function saveCard(db: SQLiteDatabase, id: string | null, input: CardInput, images: ImageChanges): Promise<string> {
   const now = Date.now();
   const cardId = id ?? randomUUID();
+  const hasImageChange = images.front !== undefined || images.back !== undefined;
   await inTransaction(db, async (tx) => {
     if (id) {
       await tx.runAsync(
@@ -190,18 +206,19 @@ export async function saveCard(db: SQLiteDatabase, id: string | null, input: Car
       }
     }
   });
-  changed();
+  if (hasImageChange) changed('cards', 'images');
+  else changed('cards');
   return cardId;
 }
 
 export async function deleteCard(db: SQLiteDatabase, id: string) {
   await inTransaction(db, (tx) => tx.runAsync('DELETE FROM card WHERE id = ?', id));
-  changed();
+  changed('cards', 'images');
 }
 
 export async function setPinned(db: SQLiteDatabase, id: string, pinned: boolean) {
   await inTransaction(db, (tx) => tx.runAsync('UPDATE card SET pinned = ? WHERE id = ?', pinned ? 1 : 0, id));
-  changed();
+  changed('cards');
 }
 
 /** Counts an opening, so "Most used" sorting puts everyday cards first. */
@@ -209,7 +226,7 @@ export async function markUsed(db: SQLiteDatabase, id: string) {
   await inTransaction(db, (tx) =>
     tx.runAsync('UPDATE card SET use_count = use_count + 1, last_used_at = ? WHERE id = ?', Date.now(), id),
   );
-  changed();
+  changed('cards');
 }
 
 export async function createCategory(db: SQLiteDatabase, name: string, color: string): Promise<string> {
@@ -225,7 +242,7 @@ export async function createCategory(db: SQLiteDatabase, name: string, color: st
       Date.now(),
     );
   });
-  changed();
+  changed('categories');
   return id;
 }
 
@@ -243,7 +260,7 @@ export async function updateCategory(db: SQLiteDatabase, id: string, patch: { na
     return true;
   });
   if (!updated) return;
-  changed();
+  changed('categories');
 }
 
 /** Saves a new order: ids from first to last. */
@@ -251,13 +268,13 @@ export async function reorderCategories(db: SQLiteDatabase, ids: string[]) {
   await inTransaction(db, async (tx) => {
     for (let i = 0; i < ids.length; i++) await tx.runAsync('UPDATE category SET sort_order = ? WHERE id = ?', i, ids[i]);
   });
-  changed();
+  changed('categories');
 }
 
 /** Deletes a category. Its cards are kept and become "No category". */
 export async function deleteCategory(db: SQLiteDatabase, id: string) {
   await inTransaction(db, (tx) => tx.runAsync('DELETE FROM category WHERE id = ?', id));
-  changed();
+  changed('categories', 'cards');
 }
 
 // ---------- Backup ----------
@@ -299,7 +316,8 @@ export async function importAll(db: SQLiteDatabase, data: BackupPayload, mode: I
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET category_id = excluded.category_id, title = excluded.title, notes = excluded.notes,
            pinned = excluded.pinned, use_count = MAX(card.use_count, excluded.use_count),
-           last_used_at = MAX(COALESCE(card.last_used_at, 0), COALESCE(excluded.last_used_at, 0)), updated_at = excluded.updated_at`,
+           last_used_at = NULLIF(MAX(COALESCE(card.last_used_at, 0), COALESCE(excluded.last_used_at, 0)), 0),
+           updated_at = excluded.updated_at`,
         c.id,
         c.categoryId,
         c.title,
@@ -325,13 +343,14 @@ export async function importAll(db: SQLiteDatabase, data: BackupPayload, mode: I
       );
     }
   });
-  changed();
+  changed('cards', 'categories', 'images');
 }
 
-/** Deletes every card, picture and category, and puts settings back to default. */
+/** Deletes every card, picture and custom category, resets settings, and restores starter categories. */
 export async function eraseEverything(db: SQLiteDatabase) {
   await inTransaction(db, async (tx) => {
     await tx.execAsync('DELETE FROM card_image; DELETE FROM card; DELETE FROM category; DELETE FROM setting;');
+    await seedStarterCategories(tx);
   });
   await exclusively(() => db.execAsync('VACUUM'));
   changed();

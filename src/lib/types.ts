@@ -25,10 +25,9 @@ export interface Card {
   updatedAt: number;
 }
 
-/** A card as the home screen lists it: with its small front/back pictures. */
+/** A card as the home screen lists it: with its front thumbnail (falling back to back). */
 export interface CardSummary extends Card {
-  frontThumb: string | null;
-  backThumb: string | null;
+  thumb: string | null;
 }
 
 export interface CardImage {

@@ -31,7 +31,7 @@ export default function Categories() {
     const j = index + delta;
     if (j < 0 || j >= ids.length) return;
     [ids[index], ids[j]] = [ids[j], ids[index]];
-    reorderCategories(db, ids);
+    reorderCategories(db, ids).catch(() => {});
   };
 
   const remove = (c: Category) => {
@@ -41,7 +41,13 @@ export default function Categories() {
       n ? `Its ${plural(n, 'card')} will be kept and moved to “No category”.` : 'There are no cards in it.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => deleteCategory(db, c.id) },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            deleteCategory(db, c.id).catch(() => Alert.alert('Couldn’t delete the category', 'Please try again.'));
+          },
+        },
       ],
     );
   };
@@ -104,7 +110,9 @@ export default function Categories() {
             </View>
             <Switch
               value={c.active}
-              onValueChange={(v) => updateCategory(db, c.id, { active: v })}
+              onValueChange={(v) => {
+                updateCategory(db, c.id, { active: v }).catch(() => {});
+              }}
               trackColor={{ true: colors.accent, false: colors.border }}
               thumbColor="#FFFFFF"
               accessibilityLabel={`${c.name} active`}

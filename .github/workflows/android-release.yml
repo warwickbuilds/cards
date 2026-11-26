@@ -1,5 +1,4 @@
-# Builds signed Android APKs: a small arm64 one for modern phones and a
-# universal one for every phone (plugins/withAbiSplits.js).
+# Builds a signed arm64-v8a Android release APK (Android 16+ / Pixel 10+).
 #
 # - Pushing a tag like v0.2.0 builds the APK, signs it with the release key
 #   and publishes it as a GitHub Release. The tag must match "version" in app.json.
@@ -87,6 +86,12 @@ jobs:
         env:
           CI: 1
 
+      - name: Verify prebuild security and architecture settings
+        run: |
+          grep -q '^expo\.sqlite\.useSQLCipher=true$' android/gradle.properties
+          grep -q '^reactNativeArchitectures=arm64-v8a$' android/gradle.properties
+          grep -q '^android\.minSdkVersion=36$' android/gradle.properties
+
       - name: Restore the release key
         if: env.HAS_KEY == 'true'
         run: |
@@ -101,7 +106,7 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
-      - name: Name the APKs and check their signatures
+      - name: Name the APK and verify signature & offline permissions
         id: apk
         env:
           EXPECTED_SHA256: ${{ secrets.ANDROID_CERT_SHA256 }}
@@ -109,41 +114,41 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           OUT=android/app/build/outputs/apk/release
           ARM64="cards-$VERSION-arm64.apk"
-          UNIVERSAL="cards-$VERSION-universal.apk"
-          cp "$OUT/app-arm64-v8a-release.apk" "$ARM64"
-          cp "$OUT/app-universal-release.apk" "$UNIVERSAL"
+          cp "$OUT/app-release.apk" "$ARM64"
+
+          AAPT2=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
+          echo "APK permissions:"
+          "$AAPT2" dump permissions "$ARM64" | tee perms.txt
+          if grep -q 'android\.permission\.INTERNET' perms.txt; then
+            echo "::error::$ARM64 includes android.permission.INTERNET! Release builds must be fully offline."
+            exit 1
+          fi
+
           APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
           WANT=$(echo "$EXPECTED_SHA256" | tr -d ': ' | tr 'A-F' 'a-f')
-          for APK in "$ARM64" "$UNIVERSAL"; do
-            "$APKSIGNER" verify --print-certs "$APK" | tee certs.txt
-            ACTUAL=$(grep -m1 'certificate SHA-256 digest' certs.txt | awk '{print $NF}')
-            if [ "$IS_RELEASE" = "true" ] && [ -n "$WANT" ] && [ "$ACTUAL" != "$WANT" ]; then
-              echo "::error::$APK is signed with $ACTUAL but ANDROID_CERT_SHA256 says $WANT. Phones would refuse this update."
-              exit 1
-            fi
-          done
+          "$APKSIGNER" verify --print-certs "$ARM64" | tee certs.txt
+          ACTUAL=$(grep -m1 'certificate SHA-256 digest' certs.txt | awk '{print $NF}')
+          if [ "$IS_RELEASE" = "true" ] && [ -n "$WANT" ] && [ "$ACTUAL" != "$WANT" ]; then
+            echo "::error::$ARM64 is signed with $ACTUAL but ANDROID_CERT_SHA256 says $WANT. Phones would refuse this update."
+            exit 1
+          fi
           echo "sha256=$ACTUAL" >> "$GITHUB_OUTPUT"
           echo "arm64=$ARM64" >> "$GITHUB_OUTPUT"
-          echo "universal=$UNIVERSAL" >> "$GITHUB_OUTPUT"
           {
             echo "| APK | Size |"
             echo "| --- | --- |"
-            for APK in "$ARM64" "$UNIVERSAL"; do
-              echo "| $APK | $(du -m "$APK" | cut -f1) MB |"
-            done
+            echo "| $ARM64 | $(du -m "$ARM64" | cut -f1) MB |"
           } | tee -a "$GITHUB_STEP_SUMMARY"
           if [ "$HAS_KEY" != "true" ]; then
-            echo "::warning::No release key secrets, so these APKs are signed with the debug key. They're for testing only and won't install over a released version."
+            echo "::warning::No release key secrets, so this APK is signed with the debug key. It's for testing only and won't install over a released version."
           fi
 
-      - name: Keep the APKs as build artifacts
+      - name: Keep the APK as a build artifact
         if: env.IS_RELEASE != 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: cards-${{ steps.version.outputs.version }}-apks
-          path: |
-            ${{ steps.apk.outputs.arm64 }}
-            ${{ steps.apk.outputs.universal }}
+          name: cards-${{ steps.version.outputs.version }}-apk
+          path: ${{ steps.apk.outputs.arm64 }}
           retention-days: 7
 
       - name: Publish the GitHub Release
@@ -151,13 +156,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           ARM64: ${{ steps.apk.outputs.arm64 }}
-          UNIVERSAL: ${{ steps.apk.outputs.universal }}
         run: |
           cat > notes.md <<NOTES
-          Download one APK below and open it on your Android phone to install or update:
-
-          - **$ARM64**: for almost every phone from the last several years (64-bit). Smaller download.
-          - **$UNIVERSAL**: works on every Android phone, including older 32-bit ones. Pick this if the other one won't install.
+          Download **$ARM64** below and open it on your Android 16+ phone (Pixel 10 and newer) to install or update.
 
           Cards has no internet access, so it never checks for updates itself: come back here for new versions.
           First time? See [Installing on Android](https://github.com/${{ github.repository }}#install).
@@ -167,14 +168,13 @@ jobs:
           Signing certificate SHA-256: \`${{ steps.apk.outputs.sha256 }}\`
           NOTES
           if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
-            # The release was made on GitHub's Releases page, which also creates the tag: add the APKs to it.
-            gh release upload "$GITHUB_REF_NAME" "$UNIVERSAL" --clobber
+            # The release was made on GitHub's Releases page, which also creates the tag: add the APK to it.
+            gh release upload "$GITHUB_REF_NAME" "$ARM64" --clobber
             gh release view "$GITHUB_REF_NAME" --json body --jq .body >> notes.md
             gh release edit "$GITHUB_REF_NAME" --notes-file notes.md
           else
-            gh release create "$GITHUB_REF_NAME" "$UNIVERSAL" \
+            gh release create "$GITHUB_REF_NAME" "$ARM64" \
               --title "Cards ${{ steps.version.outputs.version }}" \
               --notes-file notes.md \
               --generate-notes
           fi
-          gh release upload "$GITHUB_REF_NAME" "$ARM64" --clobber

@@ -19,6 +19,8 @@ type Item =
   | { kind: 'header'; key: string; section: Section }
   | { kind: 'row'; key: string; cards: CardSummary[]; section: Section };
 
+const keyExtractor = (i: Item) => i.key;
+
 export default function Home() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -30,19 +32,33 @@ export default function Home() {
   const [menuFor, setMenuFor] = useState<string | null>(null);
 
   const catById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
+  const chipCats = useMemo(
+    () => sortCategories(categories).filter((c) => c.active || settings.showInactive),
+    [categories, settings.showInactive],
+  );
+  const hasLoose = useMemo(() => cards.some((c) => !c.categoryId || !catById.has(c.categoryId)), [cards, catById]);
+
+  // Drop stale filter if the selected category was deleted or switched off.
+  const effectiveFilter = useMemo(() => {
+    if (!filter) return null;
+    if (filter === UNCATEGORISED_ID) return hasLoose ? filter : null;
+    return chipCats.some((c) => c.id === filter) ? filter : null;
+  }, [filter, chipCats, hasLoose]);
+
   const sections = useMemo(
     () =>
       buildSections(cards, categories, {
         sortMode: settings.sortMode,
         showInactive: settings.showInactive,
-        categoryFilter: filter,
+        categoryFilter: effectiveFilter,
         query,
       }),
-    [cards, categories, settings.sortMode, settings.showInactive, filter, query],
+    [cards, categories, settings.sortMode, settings.showInactive, effectiveFilter, query],
   );
-  const hidden = settings.showInactive ? 0 : hiddenCount(cards, categories);
-  const chipCats = sortCategories(categories).filter((c) => c.active || settings.showInactive);
-  const hasLoose = cards.some((c) => !c.categoryId || !catById.has(c.categoryId));
+  const hidden = useMemo(
+    () => (settings.showInactive ? 0 : hiddenCount(cards, categories)),
+    [cards, categories, settings.showInactive],
+  );
 
   const items = useMemo(() => {
     const out: Item[] = [];
@@ -67,9 +83,52 @@ export default function Home() {
     setMenuFor(null);
     Alert.alert(`Delete “${card.title}”?`, 'The card and its photos are removed from this phone. This can’t be undone.', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteCard(db, card.id) },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          deleteCard(db, card.id).catch(() => Alert.alert('Couldn’t delete the card', 'Please try again.'));
+        },
+      },
     ]);
   };
+
+  const renderItem = useCallback(
+    ({ item }: { item: Item }) =>
+      item.kind === 'header' ? (
+        <View style={styles.sectionHeader}>
+          {item.section.color ? (
+            <View style={[styles.sectionDot, { backgroundColor: categoryColor(item.section.color) }]} />
+          ) : null}
+          {item.section.id === '__pinned' ? <Pin size={14} color={colors.textMuted} /> : null}
+          <T variant="eyebrow" color={colors.textMuted} style={{ flex: 1 }}>
+            {item.section.title}
+            {item.section.inactive ? ' · off' : ''}
+          </T>
+          <T variant="caption" color={colors.textFaint}>
+            {item.section.cards.length}
+          </T>
+        </View>
+      ) : (
+        <View style={styles.row}>
+          {item.cards.map((c) => {
+            const cat = c.categoryId ? catById.get(c.categoryId) : undefined;
+            return (
+              <CardTile
+                key={c.id}
+                card={c}
+                color={cat?.color ?? null}
+                categoryName={showCategoryUnderTile && item.section.id !== c.categoryId ? (cat?.name ?? null) : null}
+                onPress={open}
+                onLongPress={longPress}
+              />
+            );
+          })}
+          {item.cards.length === 1 ? <View style={{ flex: 1 }} /> : null}
+        </View>
+      ),
+    [colors.textMuted, colors.textFaint, catById, showCategoryUnderTile, open, longPress],
+  );
 
   const header = (
     <View style={{ gap: space[4], paddingBottom: space[2] }}>
@@ -112,22 +171,22 @@ export default function Home() {
               contentContainerStyle={styles.chips}
               style={styles.chipScroll}
             >
-              <Chip label="All" selected={filter === null} onPress={() => setFilter(null)} />
+              <Chip label="All" selected={effectiveFilter === null} onPress={() => setFilter(null)} />
               {chipCats.map((c) => (
                 <Chip
                   key={c.id}
                   label={c.name}
                   dot={categoryColor(c.color)}
                   muted={!c.active}
-                  selected={filter === c.id}
-                  onPress={() => setFilter(filter === c.id ? null : c.id)}
+                  selected={effectiveFilter === c.id}
+                  onPress={() => setFilter(effectiveFilter === c.id ? null : c.id)}
                 />
               ))}
               {hasLoose ? (
                 <Chip
                   label="No category"
-                  selected={filter === UNCATEGORISED_ID}
-                  onPress={() => setFilter(filter === UNCATEGORISED_ID ? null : UNCATEGORISED_ID)}
+                  selected={effectiveFilter === UNCATEGORISED_ID}
+                  onPress={() => setFilter(effectiveFilter === UNCATEGORISED_ID ? null : UNCATEGORISED_ID)}
                 />
               ) : null}
             </ScrollView>
@@ -141,7 +200,9 @@ export default function Home() {
     <View style={{ paddingTop: space[4], gap: space[3] }}>
       {hidden > 0 && !searching ? (
         <Pressable
-          onPress={() => setSetting(db, 'showInactive', true)}
+          onPress={() => {
+            setSetting(db, 'showInactive', true).catch(() => {});
+          }}
           accessibilityRole="button"
           style={[styles.hiddenNote, { borderColor: colors.border }]}
         >
@@ -166,9 +227,13 @@ export default function Home() {
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <FlatList
         data={items}
-        keyExtractor={(i) => i.key}
+        keyExtractor={keyExtractor}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
+        removeClippedSubviews
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={7}
         contentContainerStyle={{
           paddingTop: insets.top + space[2],
           paddingHorizontal: layout.screenPadding,
@@ -193,40 +258,7 @@ export default function Home() {
             />
           ) : undefined
         }
-        renderItem={({ item }) =>
-          item.kind === 'header' ? (
-            <View style={styles.sectionHeader}>
-              {item.section.color ? (
-                <View style={[styles.sectionDot, { backgroundColor: categoryColor(item.section.color) }]} />
-              ) : null}
-              {item.section.id === '__pinned' ? <Pin size={14} color={colors.textMuted} /> : null}
-              <T variant="eyebrow" color={colors.textMuted} style={{ flex: 1 }}>
-                {item.section.title}
-                {item.section.inactive ? ' · off' : ''}
-              </T>
-              <T variant="caption" color={colors.textFaint}>
-                {item.section.cards.length}
-              </T>
-            </View>
-          ) : (
-            <View style={styles.row}>
-              {item.cards.map((c) => {
-                const cat = c.categoryId ? catById.get(c.categoryId) : undefined;
-                return (
-                  <CardTile
-                    key={c.id}
-                    card={c}
-                    color={cat?.color ?? null}
-                    categoryName={showCategoryUnderTile && item.section.id !== c.categoryId ? (cat?.name ?? null) : null}
-                    onPress={open}
-                    onLongPress={longPress}
-                  />
-                );
-              })}
-              {item.cards.length === 1 ? <View style={{ flex: 1 }} /> : null}
-            </View>
-          )
-        }
+        renderItem={renderItem}
       />
 
       {cards.length > 0 ? (
@@ -266,7 +298,7 @@ export default function Home() {
               icon={menuCard.pinned ? PinOff : Pin}
               label={menuCard.pinned ? 'Unpin' : 'Pin to top'}
               onPress={() => {
-                setPinned(db, menuCard.id, !menuCard.pinned);
+                setPinned(db, menuCard.id, !menuCard.pinned).catch(() => {});
                 setMenuFor(null);
               }}
             />

@@ -13,19 +13,31 @@ export function LockScreen() {
   const { colors } = useTheme();
   const { unlock } = useSecurity();
   const asked = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    let active = true;
     const ask = () => {
-      if (asked.current || AppState.currentState !== 'active') return;
+      if (!active || asked.current || AppState.currentState !== 'active') return;
       asked.current = true;
       unlock().finally(() => {
         asked.current = false;
       });
     };
-    const t = setTimeout(ask, 250);
-    const sub = AppState.addEventListener('change', (s) => s === 'active' && setTimeout(ask, 250));
+    const schedule = () => {
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(ask, 50);
+    };
+    schedule();
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') schedule();
+    });
     return () => {
-      clearTimeout(t);
+      active = false;
+      if (timer.current) {
+        clearTimeout(timer.current);
+        timer.current = null;
+      }
       sub.remove();
     };
   }, [unlock]);

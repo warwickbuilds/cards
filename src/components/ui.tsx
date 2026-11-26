@@ -4,6 +4,7 @@ import type { LucideIcon } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
   Modal,
   Pressable,
   StyleSheet,
@@ -18,6 +19,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useSecurity } from '@/security/SecurityProvider';
 import { useTheme } from '@/theme/ThemeProvider';
 import { layout, MAX_FONT_SCALE, radius, space, type } from '@/theme/tokens';
 
@@ -301,10 +303,11 @@ export function Sheet({
   children: ReactNode;
 }) {
   const { colors } = useTheme();
+  const { locked } = useSecurity();
   const insets = useSafeAreaInsets();
   return (
     <Modal
-      visible={visible}
+      visible={visible && !locked}
       transparent
       animationType="slide"
       onRequestClose={onClose}
@@ -316,7 +319,7 @@ export function Sheet({
         onPress={onClose}
         accessibilityLabel="Close"
       />
-      <View style={styles.sheetWrap} pointerEvents="box-none">
+      <KeyboardAvoidingView style={styles.sheetWrap} behavior="padding" pointerEvents="box-none">
         <View style={[styles.sheet, { backgroundColor: colors.surface, paddingBottom: insets.bottom + space[4] }]}>
           <View style={[styles.handle, { backgroundColor: colors.border }]} />
           {title ? (
@@ -326,7 +329,7 @@ export function Sheet({
           ) : null}
           {children}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

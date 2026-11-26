@@ -40,7 +40,7 @@ export function CardArt({
           contentFit={contentFit}
           // Card photos are never written to the image cache on disk.
           cachePolicy="memory"
-          transition={120}
+          transition={0}
           accessibilityIgnoresInvertColors
         />
       ) : (

@@ -80,6 +80,9 @@ export function readHeader(bytes: Uint8Array): Header {
   if (!isBackupFile(bytes)) throw new BackupCryptoError('This file isn’t a Cards backup.', 'not-a-backup');
   const version = bytes[8];
   const kdf = bytes[9];
+  if (version < 1) {
+    throw new BackupCryptoError('The backup file is damaged and can’t be read.', 'damaged');
+  }
   if (version > FILE_VERSION || kdf !== KDF_PBKDF2_SHA256) {
     throw new BackupCryptoError('This backup was made by a newer version of Cards. Update the app, then import it.', 'newer');
   }

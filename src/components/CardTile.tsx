@@ -40,7 +40,7 @@ export const CardTile = memo(function CardTile({
       <View
         style={[styles.shadow, { shadowColor: colors.shadow, shadowOpacity: isDark ? 0.5 : 0.18, elevation: isDark ? 0 : 4 }]}
       >
-        <CardArt uri={jpegUri(card.frontThumb)} title={card.title} color={color} />
+        <CardArt uri={jpegUri(card.thumb)} title={card.title} color={color} />
       </View>
       <View style={styles.caption}>
         {card.pinned ? <Pin size={13} color={colors.textMuted} fill={colors.textMuted} /> : null}

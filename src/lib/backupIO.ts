@@ -26,6 +26,7 @@ export async function exportBackup(
   db: SQLiteDatabase,
   passphrase: string,
   beforePicker?: () => void,
+  afterPicker?: () => void,
 ): Promise<ExportResult | null> {
   let folder: Directory | null = null;
   beforePicker?.();
@@ -33,6 +34,8 @@ export async function exportBackup(
     folder = await Directory.pickDirectoryAsync();
   } catch {
     return null; // Closed without choosing.
+  } finally {
+    afterPicker?.();
   }
   if (!folder) return null;
 
@@ -42,7 +45,7 @@ export async function exportBackup(
   const fileName = backupFileName();
   const target = folder.createFile(fileName, 'application/octet-stream');
   await target.write(sealed);
-  return { fileName, cards: data.cards.length, categories: data.categories.length };
+  return { fileName: target.name || fileName, cards: data.cards.length, categories: data.categories.length };
 }
 
 export interface PickedBackup {
@@ -51,9 +54,14 @@ export interface PickedBackup {
 }
 
 /** Lets the user choose a backup file and checks it looks like one. Returns null if cancelled. */
-export async function pickBackupFile(beforePicker?: () => void): Promise<PickedBackup | null> {
+export async function pickBackupFile(beforePicker?: () => void, afterPicker?: () => void): Promise<PickedBackup | null> {
   beforePicker?.();
-  const picked = await File.pickFileAsync({ mimeTypes: ['application/octet-stream', '*/*'] });
+  let picked;
+  try {
+    picked = await File.pickFileAsync({ mimeTypes: ['application/octet-stream', '*/*'] });
+  } finally {
+    afterPicker?.();
+  }
   if (picked.canceled || !picked.result) return null;
   const file = picked.result as File;
   const bytes = await file.bytes();

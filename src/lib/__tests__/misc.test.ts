@@ -1,4 +1,4 @@
-import { canLock, lockAfterLabel, shouldRelock } from '../lockPolicy';
+import { canLock, EXTERNAL_GRACE_MS, lockAfterLabel, shouldRelock } from '../lockPolicy';
 import { passphraseStrength } from '../passphrase';
 import { cleanName, fold, matchesQuery } from '../text';
 
@@ -9,19 +9,23 @@ describe('shouldRelock', () => {
     lockAfterSeconds: 60,
     backgroundedAt: 0,
     now: 61_000,
-    externalActivity: false,
+    externalStartedAt: null as number | null,
   };
   it('locks after the chosen time away', () => {
     expect(shouldRelock(base)).toBe(true);
     expect(shouldRelock({ ...base, now: 30_000 })).toBe(false);
     expect(shouldRelock({ ...base, lockAfterSeconds: 0, now: 1 })).toBe(true);
   });
-  it('never locks when off, when the phone has no lock, or while taking a photo', () => {
+  it('never locks when off, when the phone has no lock, or during an active picker/camera grace window', () => {
     expect(shouldRelock({ ...base, enabled: false })).toBe(false);
     expect(shouldRelock({ ...base, deviceSecure: false })).toBe(false);
-    expect(shouldRelock({ ...base, externalActivity: true })).toBe(false);
+    expect(shouldRelock({ ...base, externalStartedAt: 0, now: 61_000 })).toBe(false);
     expect(shouldRelock({ ...base, backgroundedAt: null })).toBe(false);
     expect(canLock(true, false)).toBe(false);
+  });
+  it('relocks once the external activity grace window expires', () => {
+    expect(shouldRelock({ ...base, externalStartedAt: 0, now: EXTERNAL_GRACE_MS })).toBe(true);
+    expect(shouldRelock({ ...base, externalStartedAt: 0, now: EXTERNAL_GRACE_MS - 1 })).toBe(false);
   });
   it('labels', () => {
     expect(lockAfterLabel(0)).toBe('Immediately');

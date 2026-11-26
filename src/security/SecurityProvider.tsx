@@ -8,12 +8,13 @@
  *   blanks the app in the recent-apps switcher.
  *
  * The camera and file pickers send the app to the background; expectExternal()
- * stops that from locking the app while the user is mid-task.
+ * grants a bounded grace window so returning from them doesn't lock mid-task,
+ * and clearExternal() resets it if the picker never backgrounded the app.
  */
 
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as ScreenCapture from 'expo-screen-capture';
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 
 import { useSettingsStatus } from '@/db/DataProvider';
@@ -23,8 +24,10 @@ interface Security {
   locked: boolean;
   deviceSecure: boolean;
   unlock: () => Promise<boolean>;
-  /** Call before opening the camera or a picker. */
+  /** Call immediately before launching the camera or a file picker. */
   expectExternal: () => void;
+  /** Call in finally after an external activity returns to clear any unused flag. */
+  clearExternal: () => void;
   /** Ask for the fingerprint/PIN without locking the app (e.g. to turn the lock on). */
   confirmIdentity: (reason: string) => Promise<boolean>;
 }
@@ -46,7 +49,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
   const [locked, setLocked] = useState(true);
   const [deviceChecked, setDeviceChecked] = useState(false);
   const backgroundedAt = useRef<number | null>(null);
-  const external = useRef(false);
+  const externalStartedAt = useRef<number | null>(null);
   const authenticating = useRef(false);
 
   // Screenshot blocking follows the setting.
@@ -84,10 +87,10 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
         lockAfterSeconds: s.lockAfterSeconds,
         backgroundedAt: backgroundedAt.current,
         now: Date.now(),
-        externalActivity: external.current,
+        externalStartedAt: externalStartedAt.current,
       });
       backgroundedAt.current = null;
-      external.current = false;
+      externalStartedAt.current = null;
       if (relock) setLocked(true);
       // Re-check in case the user removed their screen lock while away.
       deviceHasLock().then(setDeviceSecure);
@@ -121,27 +124,37 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
   }, [authenticate]);
 
   const expectExternal = useCallback(() => {
-    external.current = true;
+    externalStartedAt.current = Date.now();
   }, []);
 
-  return (
-    <SecurityContext.Provider
-      value={{
-        locked: !checked || (locked && canLock(settings.lockEnabled, deviceSecure)),
-        deviceSecure,
-        unlock,
-        expectExternal,
-        // Proving who you are also counts as unlocking, so turning the lock on doesn't lock you out at once.
-        confirmIdentity: async (reason: string) => {
-          const ok = await authenticate(reason);
-          if (ok) setLocked(false);
-          return ok;
-        },
-      }}
-    >
-      {children}
-    </SecurityContext.Provider>
+  const clearExternal = useCallback(() => {
+    if (backgroundedAt.current === null) externalStartedAt.current = null;
+  }, []);
+
+  const confirmIdentity = useCallback(
+    async (reason: string) => {
+      const ok = await authenticate(reason);
+      if (ok) setLocked(false);
+      return ok;
+    },
+    [authenticate],
   );
+
+  const isLocked = !checked || (locked && canLock(settings.lockEnabled, deviceSecure));
+
+  const value = useMemo<Security>(
+    () => ({
+      locked: isLocked,
+      deviceSecure,
+      unlock,
+      expectExternal,
+      clearExternal,
+      confirmIdentity,
+    }),
+    [isLocked, deviceSecure, unlock, expectExternal, clearExternal, confirmIdentity],
+  );
+
+  return <SecurityContext.Provider value={value}>{children}</SecurityContext.Provider>;
 }
 
 export function useSecurity(): Security {
