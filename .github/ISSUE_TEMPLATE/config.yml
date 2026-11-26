@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security problem
+    url: https://github.com/warwickbuilds/cards/security/advisories/new
+    about: Please report security problems privately, not as a public issue.
+  - name: How to install the app
+    url: https://github.com/warwickbuilds/cards#install
+    about: Download the APK from Releases and install it on an Android phone.
+  - name: Privacy policy
+    url: https://github.com/warwickbuilds/cards/blob/main/PRIVACY.md
+    about: What Cards stores and why it collects nothing.
