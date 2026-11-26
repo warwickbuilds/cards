@@ -20,6 +20,7 @@ import {
 } from '@/lib/types';
 
 import { changed } from './store';
+import { exclusively, inTransaction } from './transaction';
 
 interface CategoryRow {
   id: string;
@@ -126,10 +127,12 @@ export async function getSettings(db: SQLiteDatabase): Promise<Settings> {
 // ---------- Writes ----------
 
 export async function setSetting<K extends keyof Settings>(db: SQLiteDatabase, key: K, value: Settings[K]) {
-  await db.runAsync(
-    'INSERT INTO setting (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
-    key,
-    JSON.stringify(value),
+  await inTransaction(db, (tx) =>
+    tx.runAsync(
+      'INSERT INTO setting (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+      key,
+      JSON.stringify(value),
+    ),
   );
   changed();
 }
@@ -147,7 +150,7 @@ export type ImageChanges = Partial<Record<Side, Omit<CardImage, 'cardId' | 'side
 export async function saveCard(db: SQLiteDatabase, id: string | null, input: CardInput, images: ImageChanges): Promise<string> {
   const now = Date.now();
   const cardId = id ?? randomUUID();
-  await db.withExclusiveTransactionAsync(async (tx) => {
+  await inTransaction(db, async (tx) => {
     if (id) {
       await tx.runAsync(
         'UPDATE card SET title = ?, notes = ?, category_id = ?, pinned = ?, updated_at = ? WHERE id = ?',
@@ -192,52 +195,60 @@ export async function saveCard(db: SQLiteDatabase, id: string | null, input: Car
 }
 
 export async function deleteCard(db: SQLiteDatabase, id: string) {
-  await db.runAsync('DELETE FROM card WHERE id = ?', id);
+  await inTransaction(db, (tx) => tx.runAsync('DELETE FROM card WHERE id = ?', id));
   changed();
 }
 
 export async function setPinned(db: SQLiteDatabase, id: string, pinned: boolean) {
-  await db.runAsync('UPDATE card SET pinned = ? WHERE id = ?', pinned ? 1 : 0, id);
+  await inTransaction(db, (tx) => tx.runAsync('UPDATE card SET pinned = ? WHERE id = ?', pinned ? 1 : 0, id));
   changed();
 }
 
 /** Counts an opening, so "Most used" sorting puts everyday cards first. */
 export async function markUsed(db: SQLiteDatabase, id: string) {
-  await db.runAsync('UPDATE card SET use_count = use_count + 1, last_used_at = ? WHERE id = ?', Date.now(), id);
+  await inTransaction(db, (tx) =>
+    tx.runAsync('UPDATE card SET use_count = use_count + 1, last_used_at = ? WHERE id = ?', Date.now(), id),
+  );
   changed();
 }
 
 export async function createCategory(db: SQLiteDatabase, name: string, color: string): Promise<string> {
   const id = randomUUID();
-  const row = await db.getFirstAsync<{ m: number | null }>('SELECT MAX(sort_order) AS m FROM category');
-  await db.runAsync(
-    'INSERT INTO category (id, name, color, active, sort_order, created_at) VALUES (?, ?, ?, 1, ?, ?)',
-    id,
-    cleanName(name),
-    color,
-    (row?.m ?? -1) + 1,
-    Date.now(),
-  );
+  await inTransaction(db, async (tx) => {
+    const row = await tx.getFirstAsync<{ m: number | null }>('SELECT MAX(sort_order) AS m FROM category');
+    await tx.runAsync(
+      'INSERT INTO category (id, name, color, active, sort_order, created_at) VALUES (?, ?, ?, 1, ?, ?)',
+      id,
+      cleanName(name),
+      color,
+      (row?.m ?? -1) + 1,
+      Date.now(),
+    );
+  });
   changed();
   return id;
 }
 
 export async function updateCategory(db: SQLiteDatabase, id: string, patch: { name?: string; color?: string; active?: boolean }) {
-  const cur = await db.getFirstAsync<CategoryRow>('SELECT * FROM category WHERE id = ?', id);
-  if (!cur) return;
-  await db.runAsync(
-    'UPDATE category SET name = ?, color = ?, active = ? WHERE id = ?',
-    patch.name != null ? cleanName(patch.name) : cur.name,
-    patch.color ?? cur.color,
-    patch.active == null ? cur.active : patch.active ? 1 : 0,
-    id,
-  );
+  const updated = await inTransaction(db, async (tx) => {
+    const cur = await tx.getFirstAsync<CategoryRow>('SELECT * FROM category WHERE id = ?', id);
+    if (!cur) return false;
+    await tx.runAsync(
+      'UPDATE category SET name = ?, color = ?, active = ? WHERE id = ?',
+      patch.name != null ? cleanName(patch.name) : cur.name,
+      patch.color ?? cur.color,
+      patch.active == null ? cur.active : patch.active ? 1 : 0,
+      id,
+    );
+    return true;
+  });
+  if (!updated) return;
   changed();
 }
 
 /** Saves a new order: ids from first to last. */
 export async function reorderCategories(db: SQLiteDatabase, ids: string[]) {
-  await db.withExclusiveTransactionAsync(async (tx) => {
+  await inTransaction(db, async (tx) => {
     for (let i = 0; i < ids.length; i++) await tx.runAsync('UPDATE category SET sort_order = ? WHERE id = ?', i, ids[i]);
   });
   changed();
@@ -245,7 +256,7 @@ export async function reorderCategories(db: SQLiteDatabase, ids: string[]) {
 
 /** Deletes a category. Its cards are kept and become "No category". */
 export async function deleteCategory(db: SQLiteDatabase, id: string) {
-  await db.runAsync('DELETE FROM category WHERE id = ?', id);
+  await inTransaction(db, (tx) => tx.runAsync('DELETE FROM category WHERE id = ?', id));
   changed();
 }
 
@@ -266,7 +277,7 @@ export type ImportMode = 'merge' | 'replace';
  * cards from the backup (matched by id); "replace" wipes first.
  */
 export async function importAll(db: SQLiteDatabase, data: BackupPayload, mode: ImportMode) {
-  await db.withExclusiveTransactionAsync(async (tx) => {
+  await inTransaction(db, async (tx) => {
     if (mode === 'replace') {
       await tx.execAsync('DELETE FROM card_image; DELETE FROM card; DELETE FROM category;');
     }
@@ -319,9 +330,9 @@ export async function importAll(db: SQLiteDatabase, data: BackupPayload, mode: I
 
 /** Deletes every card, picture and category, and puts settings back to default. */
 export async function eraseEverything(db: SQLiteDatabase) {
-  await db.withExclusiveTransactionAsync(async (tx) => {
+  await inTransaction(db, async (tx) => {
     await tx.execAsync('DELETE FROM card_image; DELETE FROM card; DELETE FROM category; DELETE FROM setting;');
   });
-  await db.execAsync('VACUUM');
+  await exclusively(() => db.execAsync('VACUUM'));
   changed();
 }

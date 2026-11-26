@@ -41,7 +41,7 @@ Builds from pull requests are signed with a debug key. A later signed release ca
 
 ## Status
 
-Version **0.1.0**: first complete version.
+Version **0.1.1**: fixes 0.1.0 not opening on a phone.
 
 | Area | State |
 | --- | --- |
@@ -51,7 +51,7 @@ Version **0.1.0**: first complete version.
 | Full-screen viewer: full brightness, keep awake, zoom, rotate, immersive | Done |
 | Security: encrypted database, app lock, screenshot blocking, no network | Done |
 | Encrypted backup and restore (merge or replace) | Done |
-| Tested on a real phone | **Not yet**: built and checked in CI only |
+| Tested on a real phone | 0.1.0 failed on first launch (fixed in 0.1.1); 0.1.1 not yet confirmed on a phone |
 
 ## Features
 
@@ -103,6 +103,7 @@ Version **0.1.0**: first complete version.
 
 | Version | Date | PR | Changes |
 | --- | --- | --- | --- |
+| 0.1.1 | 2026-11-26 | #2 | Fix: 0.1.0 stopped on launch with "file is not a database". Writes ran on a second database connection that never got the encryption key. All writes now run, one at a time, on the one encrypted connection (`src/db/transaction.ts`). An install of 0.1.0 opens fine after updating, no reinstall needed. |
 | 0.1.0 | 2026-11-26 | #1 | First version: cards with front/back photos and notes, categories with on/off, home grouped by category with search, full-brightness viewer with zoom and rotate, app lock, encrypted database, encrypted backup and restore, no internet permission. |
 
 ### Main dependency versions
@@ -134,6 +135,7 @@ Android 8.0 (API 26) and newer.
 Screens (src/app, Expo Router stack)
    │  read through live hooks (src/db/DataProvider.tsx: useWallet, useCard, useSettings…)
    │  write through small functions (src/db/repo.ts), which bump a change counter (src/db/store.ts)
+   │  every write is queued and wrapped in a transaction on the one keyed connection (src/db/transaction.ts)
    ▼
 SQLite + SQLCipher on the phone (src/db/database.ts, schema and migrations in src/db/schema.ts)
    key: 256-bit random, in expo-secure-store (Android Keystore)
@@ -242,6 +244,7 @@ Pull requests that touch the build set-up also build both APKs (debug-signed if 
 ## Maintenance
 
 - **Upgrading Expo**: follow `AGENTS.md` (read the versioned docs, use `npx expo install --fix`). Check the SQLCipher flag still lands in `android/gradle.properties` (`expo.sqlite.useSQLCipher=true`) and that `INTERNET` is still removed from the merged manifest after `npx expo prebuild -p android`.
+- **Transactions**: use `inTransaction` from `src/db/transaction.ts`. Never use expo-sqlite's `withExclusiveTransactionAsync` or `useNewConnection`: they open a second connection without the SQLCipher key and every write fails with "file is not a database". A test fails if either appears in `src`.
 - **Database changes**: append a migration; add any new table to `exportAll`/`importAll` in `src/db/repo.ts` and to `parsePayload` in `src/lib/backupData.ts`; bump `DATA_FORMAT` if old apps can't read the new backups.
 - **Backup file format** changes: bump `FILE_VERSION` in `src/lib/backupCrypto.ts` and keep reading the old one.
 - **Never** commit real card photos or numbers. Tests use tiny fake JPEG bytes.
