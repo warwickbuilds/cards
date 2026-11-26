@@ -1,0 +1,180 @@
+# Builds signed Android APKs: a small arm64 one for modern phones and a
+# universal one for every phone (plugins/withAbiSplits.js).
+#
+# - Pushing a tag like v0.2.0 builds the APK, signs it with the release key
+#   and publishes it as a GitHub Release. The tag must match "version" in app.json.
+#   Publishing a release with a new tag on GitHub's Releases page works too:
+#   the APK is added to that release when the build finishes.
+# - Pull requests that touch the build set-up build the APK too (no release),
+#   so a broken build shows up before anything is tagged.
+# - "Run workflow" on the Actions tab does the same as a pull request.
+#
+# Secrets (Settings → Secrets and variables → Actions), see README "Releases":
+#   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+#   ANDROID_CERT_SHA256 (optional: the build fails if the APK isn't signed with this certificate)
+
+name: Android release
+
+on:
+  push:
+    tags: ['v*.*.*']
+  pull_request:
+    paths:
+      - '.github/workflows/android-release.yml'
+      - 'plugins/**'
+      - 'app.json'
+      - 'app.config.js'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      IS_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') }}
+      HAS_KEY: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Read the app version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./app.json').expo.version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "App version $VERSION"
+          if [ "$IS_RELEASE" = "true" ] && [ "${GITHUB_REF_NAME}" != "v$VERSION" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} doesn't match app.json version $VERSION. Bump app.json (and package.json) first, or tag v$VERSION."
+            exit 1
+          fi
+
+      - name: Check the release key is set up
+        if: env.IS_RELEASE == 'true' && env.HAS_KEY != 'true'
+        run: |
+          echo "::error::The ANDROID_KEYSTORE_BASE64 secret is missing. See README → Releases → One-time setup."
+          exit 1
+
+      - run: npm ci
+
+      - name: Run checks
+        run: |
+          npm test -- --ci
+          npm run typecheck
+          npm run lint
+
+      - name: Generate the native Android project
+        run: npx expo prebuild --platform android --no-install
+        env:
+          CI: 1
+
+      - name: Restore the release key
+        if: env.HAS_KEY == 'true'
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > "$RUNNER_TEMP/release.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+
+      - name: Build the release APK
+        working-directory: android
+        run: ./gradlew :app:assembleRelease --no-daemon
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      - name: Name the APKs and check their signatures
+        id: apk
+        env:
+          EXPECTED_SHA256: ${{ secrets.ANDROID_CERT_SHA256 }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          OUT=android/app/build/outputs/apk/release
+          ARM64="cards-$VERSION-arm64.apk"
+          UNIVERSAL="cards-$VERSION-universal.apk"
+          cp "$OUT/app-arm64-v8a-release.apk" "$ARM64"
+          cp "$OUT/app-universal-release.apk" "$UNIVERSAL"
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          WANT=$(echo "$EXPECTED_SHA256" | tr -d ': ' | tr 'A-F' 'a-f')
+          for APK in "$ARM64" "$UNIVERSAL"; do
+            "$APKSIGNER" verify --print-certs "$APK" | tee certs.txt
+            ACTUAL=$(grep -m1 'certificate SHA-256 digest' certs.txt | awk '{print $NF}')
+            if [ "$IS_RELEASE" = "true" ] && [ -n "$WANT" ] && [ "$ACTUAL" != "$WANT" ]; then
+              echo "::error::$APK is signed with $ACTUAL but ANDROID_CERT_SHA256 says $WANT. Phones would refuse this update."
+              exit 1
+            fi
+          done
+          echo "sha256=$ACTUAL" >> "$GITHUB_OUTPUT"
+          echo "arm64=$ARM64" >> "$GITHUB_OUTPUT"
+          echo "universal=$UNIVERSAL" >> "$GITHUB_OUTPUT"
+          {
+            echo "| APK | Size |"
+            echo "| --- | --- |"
+            for APK in "$ARM64" "$UNIVERSAL"; do
+              echo "| $APK | $(du -m "$APK" | cut -f1) MB |"
+            done
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          if [ "$HAS_KEY" != "true" ]; then
+            echo "::warning::No release key secrets, so these APKs are signed with the debug key. They're for testing only and won't install over a released version."
+          fi
+
+      - name: Keep the APKs as build artifacts
+        if: env.IS_RELEASE != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cards-${{ steps.version.outputs.version }}-apks
+          path: |
+            ${{ steps.apk.outputs.arm64 }}
+            ${{ steps.apk.outputs.universal }}
+          retention-days: 7
+
+      - name: Publish the GitHub Release
+        if: env.IS_RELEASE == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARM64: ${{ steps.apk.outputs.arm64 }}
+          UNIVERSAL: ${{ steps.apk.outputs.universal }}
+        run: |
+          cat > notes.md <<NOTES
+          Download one APK below and open it on your Android phone to install or update:
+
+          - **$ARM64**: for almost every phone from the last several years (64-bit). Smaller download.
+          - **$UNIVERSAL**: works on every Android phone, including older 32-bit ones. Pick this if the other one won't install.
+
+          Cards has no internet access, so it never checks for updates itself: come back here for new versions.
+          First time? See [Installing on Android](https://github.com/${{ github.repository }}#install).
+
+          Installing over an older version keeps your data. Uninstalling deletes it.
+
+          Signing certificate SHA-256: \`${{ steps.apk.outputs.sha256 }}\`
+          NOTES
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            # The release was made on GitHub's Releases page, which also creates the tag: add the APKs to it.
+            gh release upload "$GITHUB_REF_NAME" "$UNIVERSAL" --clobber
+            gh release view "$GITHUB_REF_NAME" --json body --jq .body >> notes.md
+            gh release edit "$GITHUB_REF_NAME" --notes-file notes.md
+          else
+            gh release create "$GITHUB_REF_NAME" "$UNIVERSAL" \
+              --title "Cards ${{ steps.version.outputs.version }}" \
+              --notes-file notes.md \
+              --generate-notes
+          fi
+          gh release upload "$GITHUB_REF_NAME" "$ARM64" --clobber
