@@ -291,6 +291,7 @@ The detailed list of what works now.
 
 | Version | Date | PR | Changes |
 | --- | --- | --- | --- |
+| 0.1.1 (dev) | 2026-11-26 | #4 | Dev environment only, no app change: add `.agents/environment.json` so cloud dev environments automatically install locked dependencies with `npm ci`. |
 | 0.1.1 (docs) | 2026-11-26 | #3 | Docs and repo only, no app change: privacy-first README with banner, badges, highlights, a privacy comparison and FAQ, user guide first and developer details below; new PRIVACY.md, CODE_OF_CONDUCT.md and CONTRIBUTING.md; fuller SECURITY.md with the release certificate; bug and feature issue forms. |
 | 0.1.1 | 2026-11-26 | #2 | Fix: 0.1.0 stopped on launch with "file is not a database". Writes ran on a second database connection that never got the encryption key. All writes now run, one at a time, on the one encrypted connection (`src/db/transaction.ts`). An install of 0.1.0 opens fine after updating, no reinstall needed. |
 | 0.1.0 | 2026-11-26 | #1 | First version: cards with front/back photos and notes, categories with on/off, home grouped by category with search, full-brightness viewer with zoom and rotate, app lock, encrypted database, encrypted backup and restore, no internet permission. |
@@ -370,6 +371,7 @@ src/theme/       colours, tokens, light/dark
 plugins/         config plugins: release signing, ABI splits, version code
 docs/DESIGN.md   UX research and design decisions
 docs/banner.svg  README banner (follows light and dark mode)
+.agents/         cloud development environment setup (environment.json)
 .github/         CI and release workflows, PR template, issue forms
 PRIVACY.md, SECURITY.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md   project policies
 ```
